@@ -21,6 +21,7 @@ App {
     //Set up components for generate and sync functionality
     property string appItemId: app.info.itemId
     property string gdbPath: "~/ArcGIS/AppStudio/Data/" + appItemId + "/gdb.geodatabase"
+    property string updatesCheckfilePath: "~/ArcGIS/AppStudio/Data/" + appItemId + "/gdb.geodatabase-shm"
     property string featuresUrl: "http://services.arcgis.com/8df8p0NlLFEShl0r/arcgis/rest/services/UMNTCCampusMini4/FeatureServer"
     FileInfo {
         id: gdbfile
@@ -32,11 +33,29 @@ App {
             generateGeodatabaseParameters.returnAttachments = false;
             geodatabaseSyncTask.generateGeodatabase(generateGeodatabaseParameters, gdbPath);
         }
+        function syncgdb(){
+            gdb.path = gdbPath //if this is not set then function fails with "QFileInfo::absolutePath: Constructed with empty filename" message.
+            gdbinfobuttontext.text = " Downloading updates now...this may take some time. "
+            geodatabaseSyncTask.syncGeodatabase(gdb.syncGeodatabaseParameters, gdb);
+        }
+    }
+
+    //can keep track of when the app has synced last
+    FileInfo {
+        id: updatesCheckfile
+        filePath: updatesCheckfilePath
     }
 
     ServiceInfoTask{
         id: serviceInfoTask
         url: featuresUrl
+        onFeatureServiceInfoStatusChanged: {
+            if (featureServiceInfoStatus === Enums.FeatureServiceInfoStatusCompleted) {
+                Helper.doorkeeper()
+            } else if (featureServiceInfoStatus === Enums.FeatureServiceInfoStatusErrored) {
+                Helper.preventGDBSync()
+            }
+        }
     }
 
     GenerateGeodatabaseParameters {
@@ -51,20 +70,18 @@ App {
         id: geodatabaseSyncTask
         url: featuresUrl
 
+
         onGenerateStatusChanged: {
-            gdbinfobuttontext.text = generateStatus;
-            if (generateStatus === Enums.GenerateStatusCompleted) {
+            if (generateStatus === Enums.GenerateStatusInProgress) {
+                gdbinfobuttontext.text = " Downloading updates in progress...this may take some time. "
+            } else if (generateStatus === Enums.GenerateStatusCompleted) {
                 Helper.doorkeeper()
-                //Helper.addAllLayers()
             } else if (generateStatus === GeodatabaseSyncTask.GenerateError) {
                 gdbinfobuttontext.text = "Error: " + generateGeodatabaseError.message + " Code= "  + generateGeodatabaseError.code.toString() + " "  + generateGeodatabaseError.details;
             }
         }
 
         onSyncStatusChanged: {
-            //featureServiceTable.refreshFeatures();
-            //featureServiceWallsTable.refreshFeatures();
-            //featureServiceFloorsTable.refreshFeatures();
             if (syncStatus === Enums.SyncStatusCompleted) {
                 Helper.doorkeeper()
             }
@@ -76,36 +93,17 @@ App {
     //set up components for operational map layers: buildings, room-polygons, lines
     //per layer initialize a GeodatabaseFeatureTable, and then initialize a FeatureLayer
     //TODO: review how esri's example data is organized
-    GeodatabaseFeatureTable {
-        id: localBuildingsTable
-        geodatabase: gdbfile
-        featureServiceLayerId: 2 //this should be a configurable property
+    Geodatabase{
+        id: gdb
+        path: geodatabaseSyncTask.geodatabasePath
     }
-    GeodatabaseFeatureTable {
-        id: localRoomsTable
-        geodatabase: gdbfile
-        featureServiceLayerId: 1
-    }
+
     GeodatabaseFeatureTable {
         id: localLinesTable
-        geodatabase: gdbfile
+        geodatabase: gdb.valid ? gdb : null
         featureServiceLayerId: 0
     }
 
-    FeatureLayer {
-        id: localBuildingsLayer
-        featureTable: localBuildingsTable
-    }
-
-    FeatureLayer {
-        id: localRoomsLayer
-        featureTable: localRoomsTable
-    }
-
-    FeatureLayer {
-        id: localLinesLayer
-        featureTable: localLinesTable
-    }
 
     //define place to store local tile package and define FileFolder object
     property string tpkItemId : "0ae5d71749504e9784ac0d69ea27110f"
@@ -121,6 +119,7 @@ App {
             tpkfilepath = newFilePath;
             map.insertLayer(newLayer,0);//insert it at the bottom of the layer stack
             map.addLayer(newLayer)
+            map.extent = newLayer.extent
         }
 
         function downloadThenAddLayer(){
@@ -160,8 +159,6 @@ App {
         height: parent.height * 0.88
         width: parent.width
         anchors.top: parent.top
-        color:"green"
-        opacity: 0.5
 
         Map{
             id: map
@@ -171,6 +168,11 @@ App {
             anchors.right: mapcontainer.right
             focus: true
             rotationByPinchingEnabled: true
+
+            FeatureLayer {
+                id: localLinesLayer
+                featureTable: localLinesTable
+            }
         }
 
         }
@@ -204,10 +206,6 @@ App {
                 anchors.horizontalCenter: parent.horizontalCenter
                 onClicked: {
                     console.log("click")
-                    map.insertLayer(localBuildingsLayer,1)
-                    map.addLayer(localRoomsLayer);
-                    map.addLayer(localLinesLayer);
-                    console.log(map.layerNames);
                     infocontainer.visible = true
                     infobuttoncontainer.visible = false
                }
@@ -251,7 +249,7 @@ App {
 
                    Text{
                        id:infotext
-                       text: "text messages g"
+                       text: "Some text messages displayed here."
                        color: "white"
                        wrapMode: Text.Wrap
                        width:infocontainer.width - closeinfobutton.width
@@ -321,7 +319,9 @@ App {
                 width: toolbarcontainer.width / 3
                 onClicked: {
                     console.log("click")
-                    //downloadmenucontainer.visible = true
+                    //destory and re-fetch this info to ensure device connectiviy and feature service avaiability before allowing user to kick-off sync opeation
+                    //serviceInfoTask.featureServiceInfo.destroy()//test whetehr ths idea works
+                    //serviceInfoTask.fetchFeatureServiceInfo()//this is a bit buggy in that it takes a while to fail. Maybe re-design rocess to by default prevent sync until readiness is verified
                     proceedtomaptext.text  = "Back to Map"
                     welcomemenucontainer.visible = true
                     Helper.doorkeeper()
@@ -392,7 +392,12 @@ App {
                 onClicked: {
                     console.log("click")
                     console.log("gdbfile.generategdb()")
-                    gdbfile.generategdb();
+                    if (gdbfile.exists){
+                            gdbfile.syncgdb();
+                            }
+                    else {
+                        gdbfile.generategdb();
+                    }
                 }
             }
             Text{
@@ -410,7 +415,12 @@ App {
                 onClicked: {
                     console.log("click")
                     console.log("gdbfile.generategdb()")
-                    gdbfile.generategdb();
+                    if (gdbfile.exists){
+                            gdbfile.syncgdb();
+                            }
+                    else {
+                        gdbfile.generategdb();
+                    }
                 }
             }
         }
@@ -512,7 +522,9 @@ App {
     Component.onCompleted: {
         tpkFolder.addLayer()
         Helper.doorkeeper()
+        serviceInfoTask.fetchFeatureServiceInfo();
         console.log("app load complete")
+
     }
 
 }

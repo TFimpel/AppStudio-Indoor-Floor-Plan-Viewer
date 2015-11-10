@@ -16,6 +16,7 @@ function doorkeeper(){
         gdbinfobuttontext.text = " Download floor plan operational layers to be able to proceed. "
     }
     else if (updatesCheckfile.exists) {
+        //TODO: if layer are added to the map lastmodified date doesn't chnage. Poible solution: a removAllLayers() function equivlent to addAllLayers()
         gdbinfobuttontext.text = " Download updates for floor plan operational layers. Last updates downloaded " + updatesCheckfile.lastModified.toLocaleString("MM.dd.yyyy hh:mm ap") + "."
     }
     else {gdbinfobuttontext.text = " Download updates for floor plan operational layers. Last updates downloaded " + gdbfile.lastModified.toLocaleString("MM.dd.yyyy hh:mm ap") + "."
@@ -50,3 +51,22 @@ function preventGDBSync(){
     gdbinfobuttontext.text = "  At this time the app is unable to download updates for floor plan operational layers.  "
 }
 
+//----------------------------------------------------------------------
+//if bldg. is not currenty select update the infotext and trigger a querychange on the lines and rooms tables
+function selectBuildingOnMap(x,y) {
+    var featureIds = localBuildingsLayer.findFeatures(x, y, 1, 1);
+    if (featureIds.length > 0) {
+        console.log(featureIds.length )
+        console.log(featureIds[0])
+        var selectedFeatureId = featureIds[0];
+        infocontainer.visible = true;
+        if (selectedFeatureId != currentBuildingObjectID){
+            currentBuildingObjectID = selectedFeatureId
+            var bldgName = localBuildingsLayer.featureTable.feature(selectedFeatureId).attributeValue(bldglyr_namefield)
+            var bldgNumber = localBuildingsLayer.featureTable.feature(selectedFeatureId).attributeValue(bldglyr_bldgidfield)
+            infotext.text = bldgName + " (#" + bldgNumber + ")"
+            localLinesTable.queryFeatures("OBJECTID > 0")//this will trigger the floor slider functionailty
+            localRoomsTable.queryFeatures("OBJECTID > 0")//this will trigger the floor slider functionailty
+            }
+    }
+}

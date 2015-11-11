@@ -29,8 +29,15 @@ App {
     property var currentBuildingObjectID: ""
 
     //define relevant field names. Ultimately these should all be configurable.
-    property string bldglyr_namefield: "NAME"
-    property string bldglyr_bldgidfield: "BUILDING_NUMBER"
+    property string bldgLyr_nameField: "NAME"
+    property string bldgLyr_bldgIdField: "BUILDING_NUMBER"
+
+    property string lineLyr_bldgIdField: "BUILDING"
+    property string lineLyr_floorIdField: "FLOOR"
+
+    property string roomLyr_bldgIdField: "BUILDING"
+    property string roomLyr_floorIdField: "FLOOR"
+    property string roomLyr_roomIdField: "ROOM"
 
 //END INITIALIZING SOME GLOBAL VARIABLES USED FOR VARIOUS ODDS AND ENDS
 //--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -41,7 +48,8 @@ App {
     //Set up components for generate and sync functionality
     property string appItemId: app.info.itemId
     property string gdbPath: "~/ArcGIS/AppStudio/Data/" + appItemId + "/gdb.geodatabase"
-    property string updatesCheckfilePath: "~/ArcGIS/AppStudio/Data/" + appItemId + "/gdb.geodatabase-shm"
+    property string syncLogFolderPath: "~/ArcGIS/AppStudio/Data/" + appItemId
+    property string updatesCheckfilePath: "~/ArcGIS/AppStudio/Data/" + appItemId + "/syncLog.txt"
     property string featuresUrl: "http://services.arcgis.com/8df8p0NlLFEShl0r/arcgis/rest/services/UMNTCCampusMini4/FeatureServer"
     FileInfo {
         id: gdbfile
@@ -64,6 +72,10 @@ App {
     FileInfo {
         id: updatesCheckfile
         filePath: updatesCheckfilePath
+    }
+    FileFolder{
+        id:syncLogFolder
+        path: syncLogFolderPath
     }
 
     ServiceInfoTask{
@@ -95,6 +107,7 @@ App {
             if (generateStatus === Enums.GenerateStatusInProgress) {
                 gdbinfobuttontext.text = " Downloading updates in progress...this may take some time. "
             } else if (generateStatus === Enums.GenerateStatusCompleted) {
+                Helper.writeSyncLog()
                 Helper.doorkeeper()
             } else if (generateStatus === GeodatabaseSyncTask.GenerateError) {
                 gdbinfobuttontext.text = "Error: " + generateGeodatabaseError.message + " Code= "  + generateGeodatabaseError.code.toString() + " "  + generateGeodatabaseError.details;
@@ -103,6 +116,7 @@ App {
 
         onSyncStatusChanged: {
             if (syncStatus === Enums.SyncStatusCompleted) {
+                Helper.writeSyncLog()
                 Helper.doorkeeper()
             }
             if (syncStatus === Enums.SyncStatusErrored)
@@ -111,8 +125,6 @@ App {
     }
 
     //set up components for operational map layers: buildings, room-polygons, lines
-    //per layer initialize a GeodatabaseFeatureTable, and then initialize a FeatureLayer
-    //TODO: review how esri's example data is organized
     Geodatabase{
         id: gdb
         path: geodatabaseSyncTask.geodatabasePath
@@ -250,6 +262,7 @@ App {
             iconSource: "images/search.png"
             onClicked: {
                 console.log("click searchmenu")
+                tpkFolder.writeTextFile("test.txt","good evening")
             }
         }
     }

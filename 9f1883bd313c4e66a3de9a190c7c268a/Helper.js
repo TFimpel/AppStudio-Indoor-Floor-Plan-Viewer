@@ -4,9 +4,34 @@ function helperSayHi(){
     console.log("Helper says Hi.")
 }
 
-function writeSyncLog(){
-    syncLogFolder.writeFile("syncLog.txt","Offline Geodatabase last synced with server when this file was last modified. Very basic, I now. But hey, no annoying file lockin issues...it just works :)")
+function hideAllFloors(){
+    localRoomsLayer.definitionExpression = "OBJECTID < 0"
+    localLinesLayer.definitionExpression = "OBJECTID < 0"
 }
+
+//----------------------------------------------------------------------
+//populate the floor list slider
+function populateFloorListView(iterator,bldg){
+                floorListModel.clear();
+                var floorlist = [];
+                while (iterator.hasNext()) {
+                     var feature = iterator.next();
+                     if (feature.attributeValue(lineLyr_bldgIdField) === bldg){
+                     floorlist.push(feature.attributeValue(lineLyr_floorIdField));
+                    }
+            }
+                floorlist.sort();
+                console.log(floorlist);
+                for( var i=0; i < floorlist.length ; ++i ) {
+                    floorListModel.append({"Floor" : floorlist[i]})
+                };
+                if (floorlist.length > 0){
+                    floorcontainer.visible = true;
+                }
+                else{
+                    floorcontainer.visible = false;
+                }
+    }
 
 //------------------------------------------------------------------------------
 //take actions based on whetehr user already has local copies of tpk and gdb
@@ -43,9 +68,9 @@ function doorkeeper(){
 //----------------------------------------------------------------------
 //add all layers to the map
 function addAllLayers(){
-    map.addLayer(localBuildingsLayer);
-    map.addLayer(localRoomsLayer);
-    map.addLayer(localLinesLayer);
+    map.insertLayer(localBuildingsLayer,1);
+    map.insertLayer(localRoomsLayer,2);
+    map.insertLayer(localLinesLayer, 3);
 }
 
 //----------------------------------------------------------------------
@@ -63,16 +88,20 @@ function selectBuildingOnMap(x,y) {
         console.log(featureIds[0])
         var selectedFeatureId = featureIds[0];
         infocontainer.visible = true;
-        if (selectedFeatureId != currentBuildingObjectID){
+        if (currentBuildingObjectID != selectedFeatureId){
+            hideAllFloors()
             currentBuildingObjectID = selectedFeatureId
-            var bldgName = localBuildingsLayer.featureTable.feature(selectedFeatureId).attributeValue(bldgLyr_bldgIdField)
+            var bldgName = localBuildingsLayer.featureTable.feature(selectedFeatureId).attributeValue(bldgLyr_nameField)
             var bldgNumber = localBuildingsLayer.featureTable.feature(selectedFeatureId).attributeValue(bldgLyr_bldgIdField)
             infotext.text = bldgName + " (#" + bldgNumber + ")"
-            localLinesTable.queryFeatures("OBJECTID > 0")//this will trigger the floor slider functionailty
-            localRoomsTable.queryFeatures("OBJECTID > 0")//this will trigger the floor slider functionailty
+            currentBuildingID = bldgNumber
+            localLinesTable.queryFeatures("OBJECTID > 0")//this will trigger the populate floor slider functionailty
             }
     }
 }
+//----------------------------------------------------------------------
+//
+
 
 //----------------------------------------------------------------------
 //for keeping track when the offline geodatabase has been synced last

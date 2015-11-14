@@ -27,6 +27,8 @@ App {
 
     //define global variable to hold the currently selected building, by ObjectID
     property var currentBuildingObjectID: ""
+    //define global variable to hold the currently selected building id. used for communication between Helper functions
+    property var currentBuildingID: ""
 
     //define relevant field names. Ultimately these should all be configurable.
     property string bldgLyr_nameField: "NAME"
@@ -107,8 +109,7 @@ App {
             if (generateStatus === Enums.GenerateStatusInProgress) {
                 gdbinfobuttontext.text = " Downloading updates in progress...this may take some time. "
             } else if (generateStatus === Enums.GenerateStatusCompleted) {
-                Helper.writeSyncLog()
-                Helper.doorkeeper()
+                gdbfile.syncgdb();//a workaround. can only get layers to shown up in map after sync. not after initial generate.
             } else if (generateStatus === GeodatabaseSyncTask.GenerateError) {
                 gdbinfobuttontext.text = "Error: " + generateGeodatabaseError.message + " Code= "  + generateGeodatabaseError.code.toString() + " "  + generateGeodatabaseError.details;
             }
@@ -127,7 +128,7 @@ App {
     //set up components for operational map layers: buildings, room-polygons, lines
     Geodatabase{
         id: gdb
-        path: geodatabaseSyncTask.geodatabasePath
+        path: gdbPath
     }
 
     GeodatabaseFeatureTable {
@@ -136,6 +137,9 @@ App {
         featureServiceLayerId: 0
         onQueryFeaturesStatusChanged: {
             console.log("onQueryFeaturesStatusChanged localLinesTable")
+            if (queryFeaturesStatus === Enums.QueryFeaturesStatusCompleted) {
+                Helper.populateFloorListView(queryFeaturesResult.iterator, currentBuildingID )
+            }
         }
     }
 
@@ -203,7 +207,7 @@ App {
         }
     }
 
-//END DOWNOAD AND SYNC MECHANISM SETUP
+//END DOWNLOAD AND SYNC MECHANISM SETUP
 //--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 //--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -350,8 +354,43 @@ App {
                 height: 300
                 color:"pink"
                 ListView{
-                    id:floorlistview
+                    id:floorListView
+                    anchors.fill: parent
+                    model:floorListModel
+                    delegate:floorListDelegate
+                    highlight: Rectangle { color: "lightblue"; radius: 1; border.color: "white"; border.width: 1; }
+                    focus: true
+                    clip:true
+                    visible: parent
                 }
+                ListModel {
+                    id:floorListModel
+                    ListElement {
+                        Floor: ""
+                    }
+                }
+                Component {
+                    id: floorListDelegate
+                    Item {
+                        width: floorcontainer.width
+                        height: floorcontainer.height / 5
+                        anchors.margins: 2
+                        anchors.horizontalCenter: parent.horizontalCenter
+                        Column {
+                            Text { text: Floor }
+                            anchors.centerIn:parent
+                        }
+                        MouseArea {
+                            anchors.fill: parent
+                            onClicked: {
+                                floorListView.currentIndex = index;
+                                localLinesLayer.definitionExpression = lineLyr_floorIdField  + " = '"+(floorListModel.get(floorListView.currentIndex).Floor)+"'" + " AND " + lineLyr_bldgIdField + "= '" + currentBuildingID +"'"
+                                localRoomsLayer.definitionExpression = roomLyr_floorIdField  + " = '"+(floorListModel.get(floorListView.currentIndex).Floor)+"'" + " AND " + roomLyr_bldgIdField + "= '" + currentBuildingID +"'"
+                                    }
+                        }
+                    }
+                }
+
             }
 
             Rectangle{
@@ -386,6 +425,7 @@ App {
                        onClicked: {
                            console.log("click")
                            infocontainer.visible = false
+                           floorcontainer.visible = false
                            //infobuttoncontainer.visible = true
                        }
                    }
@@ -431,22 +471,24 @@ App {
             }
 
 
-            FeatureLayer {
-                id: localLinesLayer
-                featureTable: localLinesTable
-            }
-            FeatureLayer {
-                id: localRoomsLayer
-                featureTable: localRoomsTable
-            }
+
             FeatureLayer {
                 id: localBuildingsLayer
                 featureTable: localBuildingsTable
             }
-            onMouseClicked:{
+                onMouseClicked:{
                 Helper.selectBuildingOnMap(mouse.x, mouse.y);
+                }
+            FeatureLayer {
+                id: localRoomsLayer
+                featureTable: localRoomsTable
+                definitionExpression: "OBJECTID < 0"
             }
-
+            FeatureLayer {
+                id: localLinesLayer
+                featureTable: localLinesTable
+                definitionExpression: "OBJECTID < 0"
+            }
         }
 
     }
@@ -647,11 +689,11 @@ App {
     }
 
     Component.onCompleted: {
+        Helper.addAllLayers()
         tpkFolder.addLayer()
         Helper.doorkeeper()
         serviceInfoTask.fetchFeatureServiceInfo();
         console.log("app load complete")
-
     }
 
 }

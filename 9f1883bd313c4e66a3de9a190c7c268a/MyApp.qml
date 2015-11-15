@@ -30,12 +30,16 @@ App {
     //define global variable to hold the currently selected building id. used for communication between Helper functions
     property var currentBuildingID: ""
 
+    //define global variable to hold list of buildings for search menu
+    property var allBlgdList: []
+
     //define relevant field names. Ultimately these should all be configurable.
     property string bldgLyr_nameField: "NAME"
     property string bldgLyr_bldgIdField: "BUILDING_NUMBER"
 
     property string lineLyr_bldgIdField: "BUILDING"
     property string lineLyr_floorIdField: "FLOOR"
+    property string lineLyr_sortField: "OBJECTID"
 
     property string roomLyr_bldgIdField: "BUILDING"
     property string roomLyr_floorIdField: "FLOOR"
@@ -138,7 +142,7 @@ App {
         onQueryFeaturesStatusChanged: {
             console.log("onQueryFeaturesStatusChanged localLinesTable")
             if (queryFeaturesStatus === Enums.QueryFeaturesStatusCompleted) {
-                Helper.populateFloorListView(queryFeaturesResult.iterator, currentBuildingID )
+                Helper.populateFloorListView(queryFeaturesResult.iterator, currentBuildingID , lineLyr_sortField)
             }
         }
     }
@@ -147,15 +151,18 @@ App {
         id: localRoomsTable
         geodatabase: gdb.valid ? gdb : null
         featureServiceLayerId: 1
-        onQueryFeaturesStatusChanged: {
-            console.log("onQueryFeaturesStatusChanged localRoomsTable")
-        }
     }
 
     GeodatabaseFeatureTable {
         id: localBuildingsTable
         geodatabase: gdb.valid ? gdb : null
         featureServiceLayerId: 2
+        onQueryFeaturesStatusChanged: {
+            if (queryFeaturesStatus === Enums.QueryFeaturesStatusCompleted) {
+                Helper.buildAllBlgdList(queryFeaturesResult.iterator)
+                console.log("Helper.buildAllBlgdList(queryFeaturesResult.iterator)")
+                }
+        }
     }
 
     //define place to store local tile package and define FileFolder object
@@ -266,7 +273,12 @@ App {
             iconSource: "images/search.png"
             onClicked: {
                 console.log("click searchmenu")
-                tpkFolder.writeTextFile("test.txt","good evening")
+                if (searchmenucontainer.visible === true){
+                    searchmenucontainer.visible = false
+                } else{
+                    Helper.reloadFullBldgListModel()
+                    searchmenucontainer.visible = true
+                }
             }
         }
     }
@@ -304,7 +316,7 @@ App {
                     fader.start();
                     console.log("infobutton")
                     infocontainer.visible = true
-                    //infobuttoncontainer.visible = false
+                    infotext.text = "Select a building via the map or the search menu."
                 }
             }
             ZoomButtons {
@@ -351,18 +363,30 @@ App {
                 anchors.bottom: zoomButtons.bottom
                 anchors.right: map.right
                 anchors.margins: app.height * 0.01
-                height: 300
-                color:"pink"
+                height: ((floorListView.count * width) > (mapcontainer.height - zoomButtons.width)) ? (mapcontainer.height - zoomButtons.width)  :  (floorListView.count * width)
+                color: zoomButtons.borderColor
+                border.color: zoomButtons.borderColor
+                border.width: zoomButtons.borderColor
+                visible: false
+
                 ListView{
                     id:floorListView
                     anchors.fill: parent
                     model:floorListModel
                     delegate:floorListDelegate
-                    highlight: Rectangle { color: "lightblue"; radius: 1; border.color: "white"; border.width: 1; }
+                    verticalLayoutDirection : ListView.BottomToTop
+                    highlight:
+                        Rectangle {
+                                color: "transparent";
+                                radius: 4;
+                               border.color: "blue";
+                                border.width: 5;
+                                z : 98;}
                     focus: true
                     clip:true
                     visible: parent
                 }
+
                 ListModel {
                     id:floorListModel
                     ListElement {
@@ -372,20 +396,27 @@ App {
                 Component {
                     id: floorListDelegate
                     Item {
-                        width: floorcontainer.width
-                        height: floorcontainer.height / 5
-                        anchors.margins: 2
+                        width: zoomButtons.width
+                        height: width
                         anchors.horizontalCenter: parent.horizontalCenter
+
+                        Rectangle{
+                            anchors.fill:parent
+                            border.color: zoomButtons.borderColor
+                            color:zoomButtons.backgroundColor
+                            anchors.margins: 1
+                        }
+
                         Column {
-                            Text { text: Floor }
+                            Text { text: Floor}
                             anchors.centerIn:parent
+
                         }
                         MouseArea {
                             anchors.fill: parent
                             onClicked: {
                                 floorListView.currentIndex = index;
-                                localLinesLayer.definitionExpression = lineLyr_floorIdField  + " = '"+(floorListModel.get(floorListView.currentIndex).Floor)+"'" + " AND " + lineLyr_bldgIdField + "= '" + currentBuildingID +"'"
-                                localRoomsLayer.definitionExpression = roomLyr_floorIdField  + " = '"+(floorListModel.get(floorListView.currentIndex).Floor)+"'" + " AND " + roomLyr_bldgIdField + "= '" + currentBuildingID +"'"
+                                Helper.setFloorFilters(index);
                                     }
                         }
                     }
@@ -403,6 +434,7 @@ App {
                color: infobutton.backgroundColor
                border.color: infobutton.borderColor
                radius: 4
+               clip: true
 
 
                Row{
@@ -411,7 +443,7 @@ App {
                    width: parent.width - 2
                    anchors.horizontalCenter: parent.horizontalCenter
                    anchors.verticalCenter: parent.verticalCenter
-                   spacing: app.height * 0.01
+                   spacing: 2
 
                    StyleButton{
                        id:closeinfobutton
@@ -426,29 +458,23 @@ App {
                            console.log("click")
                            infocontainer.visible = false
                            floorcontainer.visible = false
-                           //infobuttoncontainer.visible = true
+                           currentBuildingObjectID = ""
+                           currentBuildingID = ""
+                           localBuildingsLayer.clearSelection();
+                           Helper.hideAllFloors();
                        }
                    }
-                   Flickable{
-                       id: infoflickable
-                       height:infocontainer.height - app.height * 0.01
-                       width:infocontainer.width - 10 - closeinfobutton.width * 2
-                       contentWidth: infotext.width
-                       contentHeight: infotext.height
-                       flickableDirection: Flickable.VerticalFlick
-                       anchors.verticalCenter: closeinfobutton.verticalCenter
-                       clip: true
-
-                       Text{
-                           id:infotext
-                           text: "Some text messages displayed here."
-                           color: "black"
-                           wrapMode: Text.Wrap
-                           width:infocontainer.width - closeinfobutton.width
-                           font.pointSize: 14
-                           elide: Text.ElideLeft
-                           anchors.verticalCenter: parent.verticalCenter
-                       }
+                   Text{
+                       id:infotext
+                       text: "Some text messages displayed here."
+                       color: "black"
+                       wrapMode: Text.WrapAtWordBoundaryOrAnywhere
+                       fontSizeMode: Text.Fit
+                       minimumPixelSize: 12
+                       font.pixelSize: 14
+                       clip:true
+                       width:infocontainer.width - closeinfobutton.width - zoomtoinfobutton.width - 4
+                       anchors.verticalCenter: parent.verticalCenter
                    }
                    StyleButton{
                        id:zoomtoinfobutton
@@ -475,6 +501,7 @@ App {
             FeatureLayer {
                 id: localBuildingsLayer
                 featureTable: localBuildingsTable
+                selectionColor: "white"
             }
                 onMouseClicked:{
                 Helper.selectBuildingOnMap(mouse.x, mouse.y);
@@ -687,12 +714,96 @@ App {
             }
         }
     }
+//END WELCOMENU
+//---------------------------------------------------------------------------------------------
+//---------------------------------------------------------------------------------------------
+//BEGIN SEARCHMENU
+    Rectangle{
+        id:searchmenucontainer
+        anchors.top: mapcontainer.top
+        anchors.bottom: mapcontainer.bottom
+        anchors.right: mapcontainer.right
+        anchors.left: mapcontainer.left
+        color: "white"
+        visible:false
+
+        TextField{
+                id: searchField
+                width: parent.width
+                height:30
+                focus: true
+                visible: true
+                anchors.left: parent.left
+                anchors.right: parent.right
+                anchors.top: parent.top
+                anchors.margins: 2
+                placeholderText :"Building Name"
+                onTextChanged: {
+                    if(text.length > 0 ) {
+                                Helper.reloadFilteredBldgListModel(text);
+                            } else {
+                                Helper.reloadFullBldgListModel();
+                            }
+                        }
+        }
+        ListView{
+            id:bldglistview
+            clip: true
+            width: parent.width
+            height: parent.height
+            anchors.top: searchField.bottom
+            model: bldglistmodel
+            delegate: bldgdelegate
+            anchors.bottom: parent.bottom
+            anchors.left: parent.left
+            anchors.right: parent.right
+        }
+
+        Component {
+            id: bldgdelegate
+            Item {
+                width: parent.width
+                height: searchField.height
+                anchors.margins: 2
+                anchors.left: parent.left
+                Column {
+                    Text { text: bldgname + ' (#' + bldgid + ')'}
+                    Text { text: objectid ; visible: false}
+                    anchors.left:parent.left
+                }
+                MouseArea {
+                    anchors.fill: parent
+                    onClicked: {
+                        //this should be enhanced to auto-select the feature and zoom to envelope
+                        map.zoomTo(localBuildingsLayer.featureTable.feature(objectid).geometry)
+                        searchField.text = ""
+                        searchmenucontainer.visible = false
+                        Helper.updateBuildingDisplay(objectid)
+                        }
+                }
+            }
+        }
+        ListModel{
+            id:bldglistmodel
+            ListElement {
+                objectid : "objectid"
+                bldgname: "bldgname"
+                bldgid: "bldgid"
+            }
+        }
+
+
+    }
+//END SEARCHMENU
+//---------------------------------------------------------------------------------------------
 
     Component.onCompleted: {
+        Helper.getAllBldgs()
         Helper.addAllLayers()
         tpkFolder.addLayer()
         Helper.doorkeeper()
         serviceInfoTask.fetchFeatureServiceInfo();
+        console.log(allBlgdList)
         console.log("app load complete")
     }
 

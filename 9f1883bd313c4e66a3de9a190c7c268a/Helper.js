@@ -4,6 +4,49 @@ function helperSayHi(){
     console.log("Helper says Hi.")
 }
 
+
+//--------------------------------------------------------------------------
+//build a list of all buldings, stored as a global variable used for the search menu.
+function getAllBldgs(){
+    localBuildingsTable.queryFeatures("OBJECTID > 0");
+}
+function buildAllBlgdList(iterator){
+    while (iterator.hasNext()) {
+         var feature = iterator.next();
+         var objectID = (feature.attributeValue("OBJECTID").toString())
+         var bldgID = (feature.attributeValue(bldgLyr_bldgIdField))
+         var bldgName = (feature.attributeValue(bldgLyr_nameField))
+         allBlgdList.push([objectID, bldgID, bldgName]);
+   }
+}
+
+//----------------------------------------------------------------------
+//load all buildings into the litview shown in the search menu
+function reloadFullBldgListModel(){
+    bldglistmodel.clear();
+    for( var i=0; i < allBlgdList.length ; ++i ) {
+    bldglistmodel.append({"bldgname" : allBlgdList[i][2],
+                          "objectid" : allBlgdList[i][0],
+                          "bldgid" : allBlgdList[i][1]
+                         })
+    }
+}
+
+//----------------------------------------------------------------------
+//load a filtered buildings into the litview shown in the search menu
+function reloadFilteredBldgListModel(bldgname) {
+    bldglistmodel.clear();
+    for( var i=0; i < allBlgdList.length ; ++i ) {
+        if (allBlgdList[i][2].toLowerCase().indexOf(bldgname.toLowerCase()) >= 0){
+        bldglistmodel.append({"bldgname" : allBlgdList[i][2],
+                             "objectid" : allBlgdList[i][0],
+                             "bldgid" : allBlgdList[i][1]})
+        };
+    }
+}
+
+//--------------------------------------------------------------------------------
+//hide all floors from map display
 function hideAllFloors(){
     localRoomsLayer.definitionExpression = "OBJECTID < 0"
     localLinesLayer.definitionExpression = "OBJECTID < 0"
@@ -11,19 +54,35 @@ function hideAllFloors(){
 
 //----------------------------------------------------------------------
 //populate the floor list slider
-function populateFloorListView(iterator,bldg){
+function compareBySecondArrayElement(a, b) {
+    if (a[1] === b[1]) {
+        return 0;
+    }
+    else {
+        return (a[1] > b[1]) ? -1 : 1;
+    }
+}
+
+function setFloorFilters(index){
+    localLinesLayer.definitionExpression = lineLyr_floorIdField  + " = '"+(floorListModel.get(floorListView.currentIndex).Floor)+"'" + " AND " + lineLyr_bldgIdField + "= '" + currentBuildingID +"'"
+    localRoomsLayer.definitionExpression = roomLyr_floorIdField  + " = '"+(floorListModel.get(floorListView.currentIndex).Floor)+"'" + " AND " + roomLyr_bldgIdField + "= '" + currentBuildingID +"'"
+}
+
+function populateFloorListView(iterator,bldg, sortField){
                 floorListModel.clear();
                 var floorlist = [];
                 while (iterator.hasNext()) {
                      var feature = iterator.next();
                      if (feature.attributeValue(lineLyr_bldgIdField) === bldg){
-                     floorlist.push(feature.attributeValue(lineLyr_floorIdField));
+                     var floorValue = feature.attributeValue(lineLyr_floorIdField);
+                     var sortValue = feature.attributeValue(sortField);
+                     floorlist.push([floorValue, sortValue]);
                     }
             }
-                floorlist.sort();
+                floorlist.sort(compareBySecondArrayElement);
                 console.log(floorlist);
                 for( var i=0; i < floorlist.length ; ++i ) {
-                    floorListModel.append({"Floor" : floorlist[i]})
+                    floorListModel.append({"Floor" : floorlist[i][0]})
                 };
                 if (floorlist.length > 0){
                     floorcontainer.visible = true;
@@ -31,7 +90,11 @@ function populateFloorListView(iterator,bldg){
                 else{
                     floorcontainer.visible = false;
                 }
+                floorListView.currentIndex = 0
+                setFloorFilters(0);
     }
+
+
 
 //------------------------------------------------------------------------------
 //take actions based on whetehr user already has local copies of tpk and gdb
@@ -84,23 +147,27 @@ function preventGDBSync(){
 function selectBuildingOnMap(x,y) {
     var featureIds = localBuildingsLayer.findFeatures(x, y, 1, 1);
     if (featureIds.length > 0) {
-        console.log(featureIds.length )
-        console.log(featureIds[0])
-        var selectedFeatureId = featureIds[0];
-        infocontainer.visible = true;
-        if (currentBuildingObjectID != selectedFeatureId){
-            hideAllFloors()
-            currentBuildingObjectID = selectedFeatureId
-            var bldgName = localBuildingsLayer.featureTable.feature(selectedFeatureId).attributeValue(bldgLyr_nameField)
-            var bldgNumber = localBuildingsLayer.featureTable.feature(selectedFeatureId).attributeValue(bldgLyr_bldgIdField)
-            infotext.text = bldgName + " (#" + bldgNumber + ")"
-            currentBuildingID = bldgNumber
-            localLinesTable.queryFeatures("OBJECTID > 0")//this will trigger the populate floor slider functionailty
-            }
+        updateBuildingDisplay(featureIds[0])
     }
 }
+
 //----------------------------------------------------------------------
 //
+function updateBuildingDisplay(selectedFeatureId){
+    infocontainer.visible = true;
+    if (currentBuildingObjectID != selectedFeatureId){
+        localBuildingsLayer.clearSelection();
+        localBuildingsLayer.selectFeature(selectedFeatureId);
+        hideAllFloors();
+        currentBuildingObjectID = selectedFeatureId
+        var bldgName = localBuildingsLayer.featureTable.feature(selectedFeatureId).attributeValue(bldgLyr_nameField)
+        var bldgNumber = localBuildingsLayer.featureTable.feature(selectedFeatureId).attributeValue(bldgLyr_bldgIdField)
+        infotext.text = bldgName + " (#" + bldgNumber + ")"
+        currentBuildingID = bldgNumber
+        localLinesTable.queryFeatures("OBJECTID > 0")//this will trigger the populate floor slider functionailty
+        }
+
+}
 
 
 //----------------------------------------------------------------------

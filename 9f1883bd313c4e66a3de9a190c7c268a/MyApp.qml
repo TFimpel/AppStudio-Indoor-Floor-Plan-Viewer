@@ -9,6 +9,7 @@ import ArcGIS.AppFramework 1.0
 import ArcGIS.AppFramework.Controls 1.0
 import ArcGIS.AppFramework.Runtime 1.0
 import ArcGIS.AppFramework.Runtime.Controls 1.0
+import ArcGIS.AppFramework.Runtime.Dialogs 1.0
 
 
 
@@ -19,8 +20,24 @@ App {
     width: 300
     height: 500
 
+    UserCredentials {
+        id: userCredentials
+        userName: myUsername
+        password: myPassword
+
+        onError: console.log("ERROR")
+        onTokenChanged: console.log("token changed")
+        //onAuthenticatingHostChanged: consolelog("AuthenticatingHostChanged")
+        onPasswordChanged: console.log("PasswordChanged")
+        //onTypeChanged: console.log("TypeChanged")
+    }
+
 //--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 //BEGIN INITIALIZING SOME GLOBAL VARIABLES USED FOR VARIOUS ODDS AND ENDS
+
+    //define variables to hold the username and password
+    property string myUsername: ""
+    property string myPassword: ""
 
     //define global variable to hold last update date of tpk. Tried but did not manage to avoid this.
     property string tpkfilepath: ""
@@ -87,9 +104,20 @@ App {
     ServiceInfoTask{
         id: serviceInfoTask
         url: featuresUrl
+
+        credentials: userCredentials
+
         onFeatureServiceInfoStatusChanged: {
             if (featureServiceInfoStatus === Enums.FeatureServiceInfoStatusCompleted) {
                 Helper.doorkeeper()
+                userNameField.visible = false
+                passwordField.visible = false
+                signInButton.text = "Signed in as " + myUsername
+                signInButton.anchors.top = signInDialogContainer.verticalCenter
+                signInButton.enabled = false
+                gdbinfocontainer.border.color = "white"
+                gdbinfocontainer.border.width = 1
+                gdbinfocontainer.update()
             } else if (featureServiceInfoStatus === Enums.FeatureServiceInfoStatusErrored) {
                 Helper.preventGDBSync()
             }
@@ -366,7 +394,7 @@ App {
                 height: ((floorListView.count * width) > (mapcontainer.height - zoomButtons.width)) ? (mapcontainer.height - zoomButtons.width)  :  (floorListView.count * width)
                 color: zoomButtons.borderColor
                 border.color: zoomButtons.borderColor
-                border.width: zoomButtons.borderColor
+                border.width: zoomButtons.borderWidth
                 visible: false
 
                 ListView{
@@ -527,33 +555,22 @@ App {
 //BEGIN WELCOMEMENU
     Rectangle{
         id:welcomemenucontainer
-        anchors.top: app.top
+        anchors.top: mapcontainer.top
         anchors.bottom: app.bottom
         anchors.right: app.right
         anchors.left: app.left
+        border.width:1
+        border.color: white
 
         Rectangle{
             id:titlecontainer
-            height: welcomemenucontainer.height / 4
+            height: welcomemenucontainer.height / 5
             width: welcomemenucontainer.width
             anchors.horizontalCenter:parent.horizontalCenter
             anchors.top: parent.top
             color:"darkblue"
             border.width:1
             border.color:"white"
-
-            Text{
-                id:apptitle
-                anchors.top: parent.top
-                width:parent.width
-                wrapMode: Text.WrapAtWordBoundaryOrAnywhere
-                clip:true
-                horizontalAlignment:Text.AlignHCenter
-                color: "white"
-                font.bold: Font.Bold
-                font.underline: true
-                text: "\n" + "App Title Goes Here"
-            }
 
             Text{
                 id:appdescription
@@ -569,13 +586,13 @@ App {
 
         Rectangle{
             id:gdbinfocontainer
-            height: welcomemenucontainer.height / 4
+            height: welcomemenucontainer.height / 5
             width: welcomemenucontainer.width
             anchors.horizontalCenter:parent.horizontalCenter
             anchors.top: titlecontainer.bottom
             color:"darkblue"
-            border.width:1
-            border.color:"white"
+            //border.width:1
+            //border.color:"white"
 
             ImageButton{
                 id: gdbinfoimagebutton
@@ -619,13 +636,64 @@ App {
                 }
             }
         }
-
         Rectangle{
-            id:tpkinfocontainer
-            height: welcomemenucontainer.height / 4
+            id: signInDialogContainer
+            height: welcomemenucontainer.height / 5
             width: welcomemenucontainer.width
             anchors.horizontalCenter:parent.horizontalCenter
             anchors.top: gdbinfocontainer.bottom
+            color:"darkblue"
+            //border.width:1
+            //border.color:"white"
+            visible:true
+            TextField{
+                    id: userNameField
+                    width: parent.width
+                    height:20
+                    focus: true
+                    visible: true
+                    anchors.left: parent.left
+                    anchors.right: parent.right
+                    anchors.top: parent.top
+                    anchors.margins: 5
+                    placeholderText :"ArcGIS Online Username"
+            }
+            TextField{
+                    id: passwordField
+                    width: parent.width
+                    height:20
+                    focus: true
+                    visible: true
+                    anchors.left: parent.left
+                    anchors.right: parent.right
+                    anchors.top: userNameField.bottom
+                    anchors.margins: 5
+                    placeholderText :"ArcGIS Online Password"
+                    echoMode: TextInput.Password
+                    }
+            Button{
+                id: signInButton
+                anchors.horizontalCenter: parent.horizontalCenter
+                anchors.top: passwordField.bottom
+                text: "Sign In"
+                enabled: if (userNameField.length > 0 && passwordField.length > 0){true} else {false}
+                onClicked: {console.log(userNameField.text);
+                            console.log(passwordField.text);
+                            myUsername = userNameField.text
+                            myPassword = passwordField.text
+                            userCredentials.userName = myUsername
+                            userCredentials.password = myPassword
+                            serviceInfoTask.fetchFeatureServiceInfo()
+                            }
+            }
+        }
+
+        Rectangle{
+            id:tpkinfocontainer
+            height: welcomemenucontainer.height / 5
+            width: welcomemenucontainer.width
+            anchors.horizontalCenter:parent.horizontalCenter
+            anchors.top: signInDialogContainer.bottom
             color:"darkblue"
             border.width:1
             border.color:"white"
@@ -805,6 +873,7 @@ App {
         serviceInfoTask.fetchFeatureServiceInfo();
         console.log(allBlgdList)
         console.log("app load complete")
+        console.log(userCredentials.userName)
     }
 
 }

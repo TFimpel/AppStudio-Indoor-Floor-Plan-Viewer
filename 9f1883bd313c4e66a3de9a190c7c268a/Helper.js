@@ -4,6 +4,21 @@ function helperSayHi(){
     console.log("Helper says Hi.")
 }
 
+function createOrRemoveNextTimeDeleteFile(){
+    if (nextTimeDeleteGDBfile.exists == false){
+        gdbinfobuttontext.text = " Device copy of operational layers set to be removed next time app is opened. "
+        syncLogFolder.writeFile("nextTimeDeleteGDB.txt","Offline Geodatabase will be deleted the next time the app is being started and this file exisits... workaroudn to suspected bug locking te .geodatabase while app is already loaded:)")
+    }
+    else {syncLogFolder.removeFile("nextTimeDeleteGDB.txt")
+        gdbinfobuttontext.text = " Reset to NOT delete local device copy next time app is opened. "
+    }
+}
+
+function deleteGDB(){
+    console.log("Helper executed deleteGDB()")
+    syncLogFolder.removeFile("gdb.geodatabase", true)
+    syncLogFolder.removeFolder(syncLogFolder.path, true);
+}
 
 //--------------------------------------------------------------------------
 //build a list of all buldings, stored as a global variable used for the search menu.
@@ -11,6 +26,7 @@ function getAllBldgs(){
     localBuildingsTable.queryFeatures("OBJECTID > 0");
 }
 function buildAllBlgdList(iterator){
+    allBlgdList = [];
     while (iterator.hasNext()) {
          var feature = iterator.next();
          var objectID = (feature.attributeValue("OBJECTID").toString())
@@ -99,9 +115,10 @@ function populateFloorListView(iterator,bldg, sortField){
 //------------------------------------------------------------------------------
 //take actions based on whetehr user already has local copies of tpk and gdb
 function doorkeeper(){
-    updatesCheckfile.refresh()
-    gdbfile.refresh()
-    tpkfile.refresh()
+    console.log("DOORKEEPER")
+    if (updatesCheckfile.exists) {updatesCheckfile.refresh()};
+    if (gdbfile.exists){gdbfile.refresh()};
+    if (tpkfile.exists){tpkfile.refresh()};
 
     if (!gdbfile.exists) {
         gdbinfobuttontext.text = " Download floor plan operational layers to be able to proceed. "
@@ -122,11 +139,14 @@ function doorkeeper(){
     if (!tpkFolder.exists || !gdbfile.exists){
         proceedbuttoncontainer.color = "red"
         proceedbuttoncontainermousearea.enabled = false
+        proceedtomapimagebutton.enabled = false
     }
     else{proceedbuttoncontainer.color = "green"
-         proceedbuttoncontainermousearea.enabled = true
+        proceedbuttoncontainermousearea.enabled = true
+        proceedtomapimagebutton.enabled = true
     }
 }
+
 
 //----------------------------------------------------------------------
 //add all layers to the map
@@ -139,7 +159,7 @@ function addAllLayers(){
 //----------------------------------------------------------------------
 //take actions when app is not ready to download or sync .geodatabase
 function preventGDBSync(){
-    gdbinfobuttontext.text = "  At this time the app is unable to download updates for floor plan operational layers.  "
+    gdbinfobuttontext.text = "  Unable to download updates for floor plan operational layers. Make sure you have internet connectivity and are signed in. "
 }
 
 //----------------------------------------------------------------------
@@ -154,12 +174,15 @@ function selectBuildingOnMap(x,y) {
 //----------------------------------------------------------------------
 //
 function updateBuildingDisplay(selectedFeatureId){
+    console.log(selectedFeatureId)
     infocontainer.visible = true;
     if (currentBuildingObjectID != selectedFeatureId){
         localBuildingsLayer.clearSelection();
         localBuildingsLayer.selectFeature(selectedFeatureId);
         hideAllFloors();
+        console.log(selectedFeatureId)
         currentBuildingObjectID = selectedFeatureId
+        console.log(selectedFeatureId)
         var bldgName = localBuildingsLayer.featureTable.feature(selectedFeatureId).attributeValue(bldgLyr_nameField)
         var bldgNumber = localBuildingsLayer.featureTable.feature(selectedFeatureId).attributeValue(bldgLyr_bldgIdField)
         infotext.text = bldgName + " (#" + bldgNumber + ")"

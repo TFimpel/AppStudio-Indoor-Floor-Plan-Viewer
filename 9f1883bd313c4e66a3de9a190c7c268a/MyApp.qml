@@ -4,6 +4,7 @@ import QtQuick 2.3
 import QtQuick.Controls 1.2
 import QtQuick.Layouts 1.1
 import QtPositioning 5.3
+import QtQuick.Controls.Styles 1.4 //styling the search box per http://doc.qt.io/qt-5/qml-qtquick-controls-styles-textfieldstyle.html
 
 import ArcGIS.AppFramework 1.0
 import ArcGIS.AppFramework.Controls 1.0
@@ -67,27 +68,42 @@ App {
 //--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 //BEGIN DOWNOAD AND SYNC MECHANISM SETUP
 
-    //Define place to store local geodatabase and declare FileInfo object.
-    //Set up components for generate and sync functionality
+    //Define place to store local geodatabase
+    //Set up components for generate, sync, and remove functionality
     property string appItemId: app.info.itemId
-    property string gdbPath: "~/ArcGIS/AppStudio/Data/" + appItemId + "/gdb.geodatabase"
-    property string syncLogFolderPath: "~/ArcGIS/AppStudio/Data/" + appItemId
-    property string updatesCheckfilePath: "~/ArcGIS/AppStudio/Data/" + appItemId + "/syncLog.txt"
+    property string gdbPath: "~/ArcGIS/AppStudio/Apps/" + appItemId + "/Data/gdb.geodatabase"
+    property string syncLogFolderPath: "~/ArcGIS/AppStudio/Apps/" + appItemId + "/Data"
+    property string updatesCheckfilePath: "~/ArcGIS/AppStudio/Apps/" + appItemId + "/Data/syncLog.txt"
+    property string nextTimeDeleteGDBfilePath: "~/ArcGIS/AppStudio/Apps/" + appItemId + "/Data/nextTimeDeleteGDB.txt"
     property string featuresUrl: "http://services.arcgis.com/8df8p0NlLFEShl0r/arcgis/rest/services/UMNTCCampusMini4/FeatureServer"
+
+    FileInfo {
+        id: nextTimeDeleteGDBfile
+        filePath: nextTimeDeleteGDBfilePath
+    }
+
     FileInfo {
         id: gdbfile
-        filePath: gdbPath
+        //filePath: gdbPath
+        filePath: if (nextTimeDeleteGDBfile.exists == true){"null"} else {gdbPath}
+
 
         function generategdb(){
             generateGeodatabaseParameters.initialize(serviceInfoTask.featureServiceInfo);
             generateGeodatabaseParameters.extent = map.extent;
             generateGeodatabaseParameters.returnAttachments = false;
             geodatabaseSyncTask.generateGeodatabase(generateGeodatabaseParameters, gdbPath);
+            proceedbuttoncontainer.color = "red"
+            proceedbuttoncontainermousearea.enabled = false
+            proceedtomapimagebutton.enabled = false
         }
         function syncgdb(){
             gdb.path = gdbPath //if this is not set then function fails with "QFileInfo::absolutePath: Constructed with empty filename" message.
             gdbinfobuttontext.text = " Downloading updates now...this may take some time. "
             geodatabaseSyncTask.syncGeodatabase(gdb.syncGeodatabaseParameters, gdb);
+            proceedbuttoncontainer.color = "red"
+            proceedbuttoncontainermousearea.enabled = false
+            proceedtomapimagebutton.enabled = false
         }
     }
 
@@ -112,14 +128,11 @@ App {
                 Helper.doorkeeper()
                 userNameField.visible = false
                 passwordField.visible = false
-                signInButton.text = "Signed in as " + myUsername
-                signInButton.anchors.top = signInDialogContainer.verticalCenter
-                signInButton.enabled = false
+                signInButton.visible = false
+                signedInButton.visible = true
                 gdbinfocontainer.border.color = "white"
                 gdbinfocontainer.border.width = 1
                 gdbinfocontainer.update()
-            } else if (featureServiceInfoStatus === Enums.FeatureServiceInfoStatusErrored) {
-                Helper.preventGDBSync()
             }
         }
     }
@@ -136,14 +149,13 @@ App {
         id: geodatabaseSyncTask
         url: featuresUrl
 
-
         onGenerateStatusChanged: {
             if (generateStatus === Enums.GenerateStatusInProgress) {
                 gdbinfobuttontext.text = " Downloading updates in progress...this may take some time. "
             } else if (generateStatus === Enums.GenerateStatusCompleted) {
                 gdbfile.syncgdb();//a workaround. can only get layers to shown up in map after sync. not after initial generate.
             } else if (generateStatus === GeodatabaseSyncTask.GenerateError) {
-                gdbinfobuttontext.text = "Error: " + generateGeodatabaseError.message + " Code= "  + generateGeodatabaseError.code.toString() + " "  + generateGeodatabaseError.details;
+                gdbinfobuttontext.text = "Error: " + generateGeodatabaseError.message + " Code= "  + generateGeodatabaseError.code.toString() + " "  + generateGeodatabaseError.details + "  Make sure you have internet connectivity and are signed in. ";
             }
         }
 
@@ -153,14 +165,17 @@ App {
                 Helper.doorkeeper()
             }
             if (syncStatus === Enums.SyncStatusErrored)
-                gdbinfobuttontext.text = "Error: " + syncGeodatabaseError.message + " Code= "  + syncGeodatabaseError.code.toString() + " "  + syncGeodatabaseError.details;
+                gdbinfobuttontext.text = "Error: " + syncGeodatabaseError.message + " Code= "  + syncGeodatabaseError.code.toString() + " "  + syncGeodatabaseError.details + "  Make sure you have internet connectivity and are signed in. " ;
+                proceedbuttoncontainer.color = "green"
+                proceedbuttoncontainermousearea.enabled = true
+                proceedtomapimagebutton.enabled = true
         }
     }
 
     //set up components for operational map layers: buildings, room-polygons, lines
     Geodatabase{
         id: gdb
-        path: gdbPath
+        path: if (nextTimeDeleteGDBfile.exists == true){"null"} else {gdbPath}
     }
 
     GeodatabaseFeatureTable {
@@ -222,7 +237,6 @@ App {
     }
 
 
-
     //Declare ItemPackage for downloading tile package
     ItemPackage {
         id: downloadTpk
@@ -232,13 +246,18 @@ App {
         }
         onDownloadProgress: {
             tpkinfobuttontext.text = "Download in progress... " + percentage +"%"
+            proceedbuttoncontainermousearea.enabled = false
+            proceedtomapimagebutton.enabled = false
+            proceedbuttoncontainer.color = "red"
         }
         onDownloadComplete: {
             tpkFolder.addLayer();
+            console.log(tpkFolder.path)
             Helper.doorkeeper();
         }
         onDownloadError: {
             tpkinfobuttontext.text = "Download failed"
+            Helper.doorkeeper();
         }
     }
 
@@ -263,15 +282,15 @@ App {
             height:parent.height * 0.9
             anchors.leftMargin: 2
             width:height
+            visible: if(welcomemenucontainer.visible == true || searchmenucontainer.visible ==true){false} else {true}
             iconSource: "images/actions.png"
             onClicked: {
                 console.log("click")
-                //destory and re-fetch this info to ensure device connectiviy and feature service avaiability before allowing user to kick-off sync opeation
-                //serviceInfoTask.featureServiceInfo.destroy()//test whetehr ths idea works
-                //serviceInfoTask.fetchFeatureServiceInfo()//this is a bit buggy in that it takes a while to fail. Maybe re-design rocess to by default prevent sync until readiness is verified
-                proceedtomaptext.text  = "Back to Map"
-                welcomemenucontainer.visible = true
-                Helper.doorkeeper()
+                if (searchmenucontainer.visible != true){
+                    proceedtomaptext.text  = "Back to Map"
+                    welcomemenucontainer.visible = true
+                    Helper.doorkeeper()
+                }
             }
         }
         Text{
@@ -298,14 +317,17 @@ App {
             height:parent.height * 0.9
             anchors.rightMargin: 2
             width:height
-            iconSource: "images/search.png"
+            visible: if (welcomemenucontainer.visible == true){false} else {true}
+            iconSource: if (searchmenucontainer.visible === true){"images/close.png"} else{"images/search.png"}
             onClicked: {
                 console.log("click searchmenu")
-                if (searchmenucontainer.visible === true){
-                    searchmenucontainer.visible = false
-                } else{
-                    Helper.reloadFullBldgListModel()
-                    searchmenucontainer.visible = true
+                if (welcomemenucontainer.visible != true){
+                    if (searchmenucontainer.visible === true){
+                        searchmenucontainer.visible = false
+                    } else{
+                        Helper.reloadFullBldgListModel()
+                        searchmenucontainer.visible = true
+                    }
                 }
             }
         }
@@ -391,7 +413,7 @@ App {
                 anchors.bottom: zoomButtons.bottom
                 anchors.right: map.right
                 anchors.margins: app.height * 0.01
-                height: ((floorListView.count * width) > (mapcontainer.height - zoomButtons.width)) ? (mapcontainer.height - zoomButtons.width)  :  (floorListView.count * width)
+                height: ((floorListView.count * width) > (mapcontainer.height - zoomButtons.width*1.5)) ? (mapcontainer.height - zoomButtons.width*1.5)  :  (floorListView.count * width)
                 color: zoomButtons.borderColor
                 border.color: zoomButtons.borderColor
                 border.width: zoomButtons.borderWidth
@@ -498,8 +520,8 @@ App {
                        color: "black"
                        wrapMode: Text.WrapAtWordBoundaryOrAnywhere
                        fontSizeMode: Text.Fit
-                       minimumPixelSize: 12
-                       font.pixelSize: 14
+                       minimumPointSize: 12
+                       font.pointSize: 16
                        clip:true
                        width:infocontainer.width - closeinfobutton.width - zoomtoinfobutton.width - 4
                        anchors.verticalCenter: parent.verticalCenter
@@ -530,6 +552,7 @@ App {
                 id: localBuildingsLayer
                 featureTable: localBuildingsTable
                 selectionColor: "white"
+                enableLabels: true
             }
                 onMouseClicked:{
                 Helper.selectBuildingOnMap(mouse.x, mouse.y);
@@ -538,11 +561,13 @@ App {
                 id: localRoomsLayer
                 featureTable: localRoomsTable
                 definitionExpression: "OBJECTID < 0"
+                enableLabels: true
             }
             FeatureLayer {
                 id: localLinesLayer
                 featureTable: localLinesTable
                 definitionExpression: "OBJECTID < 0"
+                enableLabels: true
             }
         }
 
@@ -554,102 +579,56 @@ App {
 //--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 //BEGIN WELCOMEMENU
     Rectangle{
-        id:welcomemenucontainer
+        id: welcomemenucontainer
         anchors.top: mapcontainer.top
         anchors.bottom: app.bottom
         anchors.right: app.right
         anchors.left: app.left
-        border.width:1
-        border.color: white
+        color:"lightgrey"
 
         Rectangle{
             id:titlecontainer
             height: welcomemenucontainer.height / 5
             width: welcomemenucontainer.width
-            anchors.horizontalCenter:parent.horizontalCenter
+            anchors.left:parent.left
+            anchors.right: parent.right
             anchors.top: parent.top
-            color:"darkblue"
-            border.width:1
-            border.color:"white"
-
+            color:"white"
+            anchors.margins: 6
+            border.width: 1
+            border.color: "grey"
             Text{
                 id:appdescription
                 anchors.top: apptitle.bottom
+                height: parent.height
                 width:parent.width
                 wrapMode: Text.WrapAtWordBoundaryOrAnywhere
                 clip:true
+                verticalAlignment: Text.AlignVCenter
                 horizontalAlignment:Text.AlignHCenter
-                color: "white"
-                text: "\n"+"App Description Goes Here. App Description Goes Here. App Description Goes Here. App Description Goes Here."
-            }
-        }
-
-        Rectangle{
-            id:gdbinfocontainer
-            height: welcomemenucontainer.height / 5
-            width: welcomemenucontainer.width
-            anchors.horizontalCenter:parent.horizontalCenter
-            anchors.top: titlecontainer.bottom
-            color:"darkblue"
-            //border.width:1
-            //border.color:"white"
-
-            ImageButton{
-                id: gdbinfoimagebutton
-                source:"images/gallery-white.png"
-                height: gdbinfocontainer.height / 1.5
-                width: height
-                anchors.top:gdbinfocontainer.top
-                anchors.horizontalCenter: parent.horizontalCenter
-                onClicked: {
-                    console.log("click")
-                    console.log("gdbfile.generategdb()")
-                    if (gdbfile.exists){
-                            gdbfile.syncgdb();
-                            }
-                    else {
-                        gdbfile.generategdb();
-                    }
-                }
-            }
-            Text{
-                id: gdbinfobuttontext
-                anchors.top:gdbinfoimagebutton.bottom
-                anchors.horizontalCenter: parent.horizontalCenter
-                color:"white"
-                wrapMode: Text.WrapAtWordBoundaryOrAnywhere
-                width:parent.width
-                clip:true
-                horizontalAlignment:Text.AlignHCenter
-            }
-            MouseArea{
-                anchors.fill: parent
-                onClicked: {
-                    console.log("click")
-                    console.log("gdbfile.generategdb()")
-                    if (gdbfile.exists){
-                            gdbfile.syncgdb();
-                            }
-                    else {
-                        gdbfile.generategdb();
-                    }
-                }
+                color: "black"
+                fontSizeMode: Text.Fit
+                minimumPointSize: 4
+                font.pointSize: 10
+                text: "App Description Goes Here. App Description Goes Here. App Description Goes Here. App Description Goes Here."
             }
         }
         Rectangle{
             id: signInDialogContainer
             height: welcomemenucontainer.height / 5
             width: welcomemenucontainer.width
-            anchors.horizontalCenter:parent.horizontalCenter
-            anchors.top: gdbinfocontainer.bottom
-            color:"darkblue"
-            //border.width:1
-            //border.color:"white"
+            anchors.left:parent.left
+            anchors.right: parent.right
+            anchors.top: titlecontainer.bottom
+            color:"white"
+            anchors.margins: 6
             visible:true
+            border.width: 1
+            border.color: "grey"
             TextField{
                     id: userNameField
                     width: parent.width
-                    height:20
+                    height:parent.height * 0.25
                     focus: true
                     visible: true
                     anchors.left: parent.left
@@ -657,11 +636,19 @@ App {
                     anchors.top: parent.top
                     anchors.margins: 5
                     placeholderText :"ArcGIS Online Username"
+                    style: TextFieldStyle {
+                        textColor: "black"
+                        background: Rectangle {
+                            radius: 2
+                            border.color: "#333"
+                            border.width: 1
+                        }
+                    }
             }
             TextField{
                     id: passwordField
                     width: parent.width
-                    height:20
+                    height:parent.height * 0.25
                     focus: true
                     visible: true
                     anchors.left: parent.left
@@ -670,12 +657,38 @@ App {
                     anchors.margins: 5
                     placeholderText :"ArcGIS Online Password"
                     echoMode: TextInput.Password
+                    style: TextFieldStyle {
+                        textColor: "black"
+                        background: Rectangle {
+                            radius: 2
+                            border.color: "#333"
+                            border.width: 1
+                        }
+                    }
                     }
             Button{
                 id: signInButton
+                visible: true
+                height: parent.height / 3
                 anchors.horizontalCenter: parent.horizontalCenter
                 anchors.top: passwordField.bottom
-                text: "Sign In"
+                anchors.margins: 1
+                style: ButtonStyle {
+                    label: Text {
+                       renderType: Text.NativeRendering
+                       verticalAlignment: Text.AlignVCenter
+                       horizontalAlignment: Text.AlignHCenter
+                       color: "white"
+                       text: "  Sign In  "
+                       font.weight: Font.DemiBold
+                     }
+                        background: Rectangle {
+                            border.width: control.activeFocus ? 2 : 1
+                            border.color: "#888"
+                            radius: 2
+                            color: "darkblue"
+                        }
+                }
                 enabled: if (userNameField.length > 0 && passwordField.length > 0){true} else {false}
                 onClicked: {console.log(userNameField.text);
                             console.log(passwordField.text);
@@ -686,67 +699,242 @@ App {
                             serviceInfoTask.fetchFeatureServiceInfo()
                             }
             }
+
+            Button{
+                id: signedInButton
+                visible: false
+                height: parent.height / 3
+                anchors.horizontalCenter: parent.horizontalCenter
+                anchors.verticalCenter: parent.verticalCenter
+                width: parent.width
+                anchors.margins: 1
+                style: ButtonStyle {
+                    label: Text {
+                       renderType: Text.NativeRendering
+                       verticalAlignment: Text.AlignVCenter
+                       horizontalAlignment: Text.AlignHCenter
+                       color: "white"
+                       text: "Signed in as " + myUsername
+                       font.weight: Font.DemiBold
+                     }
+                        background: Rectangle {
+                            border.width: control.activeFocus ? 2 : 1
+                            border.color: "#888"
+                            radius: 2
+                            color: "darkblue"
+                        }
+                }
+            }
+        }
+
+        Rectangle{
+            id:gdbinfocontainer
+            height: welcomemenucontainer.height / 5
+            width: welcomemenucontainer.width
+            anchors.right:parent.right
+            anchors.left: parent.left
+            anchors.top: signInDialogContainer.bottom
+            color:"white"
+            anchors.margins: 6
+            border.width: 1
+            border.color: "grey"
+
+            Text{
+                id: gdbinfobuttontext
+                anchors.bottom:parent.verticalCenter
+                anchors.horizontalCenter: parent.horizontalCenter
+                color:"black"
+                wrapMode: Text.WrapAtWordBoundaryOrAnywhere
+                width:parent.width
+                height: parent.height / 2
+                clip:true
+                horizontalAlignment:Text.AlignHCenter
+                fontSizeMode: Text.Fit
+                minimumPointSize: 4
+                font.pointSize: 10
+                verticalAlignment: Text.AlignVCenter
+
+            }
+            Button{
+                id: gdbinfoimagebutton
+                height: parent.height / 3
+                anchors.horizontalCenter: parent.horizontalCenter
+                anchors.top: parent.verticalCenter
+                anchors.margins: 1
+                style: ButtonStyle {
+                    label: Text {
+                       renderType: Text.NativeRendering
+                       verticalAlignment: Text.AlignVCenter
+                       horizontalAlignment: Text.AlignHCenter
+                       color: "white"
+                       text: "  Download Now  "
+                       font.weight: Font.DemiBold
+                     }
+                        background: Rectangle {
+                            border.width: control.activeFocus ? 2 : 1
+                            border.color: "#888"
+                            radius: 2
+                            color: "darkblue"
+                        }
+                }
+                onClicked: {
+                    if (gdbfile.exists){
+                            gdbfile.syncgdb();
+                            }
+                    else {
+                        gdbfile.generategdb();
+                    }
+                }
+            }
+            Button{
+                id: gdbDeleteButton
+                anchors.top: gdbinfoimagebutton.top
+                anchors.bottom: gdbinfoimagebutton.bottom
+                anchors.right: parent.right
+                width: height
+                anchors.rightMargin: 10
+                Image {
+                    anchors.fill: parent
+                    source: "images/replace.png"
+                    fillMode: Image.Stretch
+                }
+                Rectangle{
+                    anchors.fill: parent
+                    color: "transparent"
+                    border.color: "black"
+                    border.width: 1
+                    radius: 2
+                }
+                onClicked: {
+                    console.log("CLICKED gdbDeleteButton --> createNextTimeDeleteFile()")
+                    Helper.createOrRemoveNextTimeDeleteFile()
+                    /*
+                    gdbPath = "~/ArcGIS/AppStudio/Data"
+                    console.log("CLICKED gdbDeleteButton")
+                    map.removeAll()
+                    localBuildingsTable.geodatabase = null
+                    localRoomsTable.geodatabase = null
+                    localLinesTable.geodatabase = null
+                    geodatabaseSyncTask.unregisterGeodatabase(gdb)
+                    gdb.destroy()
+                    gdb.dump()
+                    gdb.path = "null"
+                    gdbfile.filePath = "null"
+                    gdbfile.refresh()
+                    updatesCheckfile.filePath = "null"
+                    console.log(map.layerCount)
+                    gdb.destroy()
+                    syncLogFolder.removeFile("gdb.geodatabase")
+                    syncLogFolder.removeFolder(syncLogFolder.path, true)
+                    syncLogFolder.renameFile("gdb.geodatabase","renamed.geodatabase")
+                    Helper.doorkeeper()
+                    */
+                }
+            }
         }
 
         Rectangle{
             id:tpkinfocontainer
             height: welcomemenucontainer.height / 5
             width: welcomemenucontainer.width
-            anchors.horizontalCenter:parent.horizontalCenter
-            anchors.top: signInDialogContainer.bottom
-            color:"darkblue"
-            border.width:1
-            border.color:"white"
+            anchors.right:parent.right
+            anchors.left: parent.left
+            anchors.top: gdbinfocontainer.bottom
+            color:"white"
+            anchors.margins: 6
+            border.width: 1
+            border.color: "grey"
 
-            ImageButton{
-                id: tpkinfoimagebutton
-                source:"images/gallery-white.png"
-                height: tpkinfocontainer.height / 1.5
-                width: height
-                anchors.top:tpkinfocontainer.top
-                anchors.horizontalCenter: parent.horizontalCenter
-                onClicked: {
-                    console.log("click")
-                    tpkFolder.downloadThenAddLayer()
-
-                }
-            }
             Text{
                 id: tpkinfobuttontext
-                anchors.top:tpkinfoimagebutton.bottom
+                anchors.bottom:parent.verticalCenter
                 anchors.horizontalCenter: parent.horizontalCenter
-                color:"white"
+                color:"black"
                 wrapMode: Text.WrapAtWordBoundaryOrAnywhere
                 width:parent.width
+                height: parent.height / 2
                 clip:true
                 horizontalAlignment:Text.AlignHCenter
+                fontSizeMode: Text.Fit
+                minimumPointSize: 4
+                font.pointSize: 10
+                verticalAlignment: Text.AlignVCenter
             }
-            MouseArea{
-                anchors.fill: parent
+            Button{
+                id: tpkinfoimagebutton
+                height: parent.height / 3
+                anchors.horizontalCenter: parent.horizontalCenter
+                anchors.top: parent.verticalCenter
+                anchors.margins: 1
+                style: ButtonStyle {
+                    label: Text {
+                       renderType: Text.NativeRendering
+                       verticalAlignment: Text.AlignVCenter
+                       horizontalAlignment: Text.AlignHCenter
+                       color: "white"
+                       text: "  Download Now  "
+                       font.weight: Font.DemiBold
+                     }
+                        background: Rectangle {
+                            border.width: control.activeFocus ? 2 : 1
+                            border.color: "#888"
+                            radius: 2
+                            color: "darkblue"
+                        }
+                }
                 onClicked: {
                     console.log("click middlebutton")
                     tpkFolder.removeFolder(tpkItemId, 1) //delete the tpk from local storage
                     tpkFolder.downloadThenAddLayer() //download and add the tpk layer
                 }
             }
+            Button{
+                id: tpkDeleteButton
+                anchors.top: tpkinfoimagebutton.top
+                anchors.bottom: tpkinfoimagebutton.bottom
+                anchors.right: parent.right
+                width: height
+                anchors.rightMargin: 10
 
+                Image {
+                    anchors.fill: parent
+                    source: "images/DeleteWinIcon.png"
+                    fillMode: Image.Stretch
+                }
+                Rectangle{
+                    anchors.fill: parent
+                    color: "transparent"
+                    border.color: "black"
+                    border.width: 1
+                    radius: 2
+                }
+                onClicked:{
+                    console.log("CLICKED tpkDeleteButton")
+                    map.removeLayerByIndex(0)
+                    tpkFolder.removeFolder(tpkFolder.path, true) //delete the tpk from local storage
+                    Helper.doorkeeper()
+                }
+            }
         }
 
 
         Rectangle{
             id:proceedbuttoncontainer
-            height: welcomemenucontainer.height / 4
             width: welcomemenucontainer.width
             anchors.right:parent.right
-            anchors.top: tpkinfocontainer.bottom
+            anchors.left: parent.left
+            anchors.bottom: welcomemenucontainer.bottom
+            anchors.top:tpkinfocontainer.bottom
             color:"green"
-            border.width:1
-            border.color:"white"
+            anchors.margins: 6
+            border.color: "grey"
+            border.width: 1
 
             function proceedToMap(){
                 console.log("proceedToMap")
                 Helper.addAllLayers()
                 welcomemenucontainer.visible = false
+                Helper.getAllBldgs()//builds the list used for building search
             }
 
             ImageButton{
@@ -787,7 +975,7 @@ App {
 //---------------------------------------------------------------------------------------------
 //BEGIN SEARCHMENU
     Rectangle{
-        id:searchmenucontainer
+        id: searchmenucontainer
         anchors.top: mapcontainer.top
         anchors.bottom: mapcontainer.bottom
         anchors.right: mapcontainer.right
@@ -798,14 +986,25 @@ App {
         TextField{
                 id: searchField
                 width: parent.width
-                height:30
+                height:zoomButtons.width
                 focus: true
                 visible: true
                 anchors.left: parent.left
                 anchors.right: parent.right
                 anchors.top: parent.top
-                anchors.margins: 2
+                anchors.margins: 5
                 placeholderText :"Building Name"
+                font.pointSize: 16
+                textColor: "black"
+                style: TextFieldStyle {
+                    textColor: "black"
+                    background: Rectangle {
+                        radius: 2
+                        border.color: "#333"
+                        border.width: 1
+                    }
+                }
+                inputMethodHints: Qt.ImhNoPredictiveText //necessary for onTextChanged signal on Android
                 onTextChanged: {
                     if(text.length > 0 ) {
                                 Helper.reloadFilteredBldgListModel(text);
@@ -832,21 +1031,22 @@ App {
             Item {
                 width: parent.width
                 height: searchField.height
-                anchors.margins: 2
+                anchors.margins: 5
                 anchors.left: parent.left
                 Column {
-                    Text { text: bldgname + ' (#' + bldgid + ')'}
-                    Text { text: objectid ; visible: false}
+                    Text { text: bldgname + ' (#' + bldgid + ')'; font.pointSize: 16}
+                    Text { text: objectid ; visible: true}
                     anchors.left:parent.left
                 }
                 MouseArea {
                     anchors.fill: parent
                     onClicked: {
+                        var foo = objectid //assign to js variable. Seems to only work that way.
                         //this should be enhanced to auto-select the feature and zoom to envelope
-                        map.zoomTo(localBuildingsLayer.featureTable.feature(objectid).geometry)
+                        map.zoomTo(localBuildingsLayer.featureTable.feature(foo).geometry)
                         searchField.text = ""
                         searchmenucontainer.visible = false
-                        Helper.updateBuildingDisplay(objectid)
+                        Helper.updateBuildingDisplay(foo);
                         }
                 }
             }
@@ -859,22 +1059,25 @@ App {
                 bldgid: "bldgid"
             }
         }
-
-
     }
 //END SEARCHMENU
 //---------------------------------------------------------------------------------------------
 
     Component.onCompleted: {
-        Helper.getAllBldgs()
-        Helper.addAllLayers()
+        if (nextTimeDeleteGDBfile.exists == true){
+            console.log(gdb.path)
+            console.log(gdbfile.filePath)
+            Helper.deleteGDB()
+            console.log("Helper.deleteGDB()")
+        }
+        else{
+            Helper.getAllBldgs()
+            Helper.addAllLayers()
+            serviceInfoTask.fetchFeatureServiceInfo();
+        }
         tpkFolder.addLayer()
         Helper.doorkeeper()
-        serviceInfoTask.fetchFeatureServiceInfo();
-        console.log(allBlgdList)
-        console.log("app load complete")
-        console.log(userCredentials.userName)
-    }
 
+    }
 }
 

@@ -130,9 +130,12 @@ App {
                 passwordField.visible = false
                 signInButton.visible = false
                 signedInButton.visible = true
-                gdbinfocontainer.border.color = "white"
-                gdbinfocontainer.border.width = 1
+                signInDialogContainer.height = welcomemenucontainer.height / 7
+                gdbinfoimagebutton.enabled = true
+                signInDialogContainer.update()
+                tpkinfocontainer.update()
                 gdbinfocontainer.update()
+                proceedbuttoncontainer.update()
             }
         }
     }
@@ -155,17 +158,19 @@ App {
             } else if (generateStatus === Enums.GenerateStatusCompleted) {
                 gdbfile.syncgdb();//a workaround. can only get layers to shown up in map after sync. not after initial generate.
             } else if (generateStatus === GeodatabaseSyncTask.GenerateError) {
-                gdbinfobuttontext.text = "Error: " + generateGeodatabaseError.message + " Code= "  + generateGeodatabaseError.code.toString() + " "  + generateGeodatabaseError.details + "  Make sure you have internet connectivity and are signed in. ";
+                gdbinfobuttontext.text = "Generate GDB Error: " + generateGeodatabaseError.message + " Code= "  + generateGeodatabaseError.code.toString() + " "  + generateGeodatabaseError.details + "  Make sure you have internet connectivity and are signed in. ";
             }
         }
 
         onSyncStatusChanged: {
             if (syncStatus === Enums.SyncStatusCompleted) {
                 Helper.writeSyncLog()
+                gdbinfobuttontext.text = "Downloading/Syncing updates completed"
                 Helper.doorkeeper()
+                gdbDeleteButton.enabled = true //settig this property to watch for gdbfile.exists is buggy
             }
             if (syncStatus === Enums.SyncStatusErrored)
-                gdbinfobuttontext.text = "Error: " + syncGeodatabaseError.message + " Code= "  + syncGeodatabaseError.code.toString() + " "  + syncGeodatabaseError.details + "  Make sure you have internet connectivity and are signed in. " ;
+                gdbinfobuttontext.text = "Sync GDB Error: " + syncGeodatabaseError.message + " Code= "  + syncGeodatabaseError.code.toString() + " "  + syncGeodatabaseError.details + "  Make sure you have internet connectivity and are signed in. " ;
                 proceedbuttoncontainer.color = "green"
                 proceedbuttoncontainermousearea.enabled = true
                 proceedtomapimagebutton.enabled = true
@@ -175,7 +180,7 @@ App {
     //set up components for operational map layers: buildings, room-polygons, lines
     Geodatabase{
         id: gdb
-        path: if (nextTimeDeleteGDBfile.exists == true){"null"} else {gdbPath}
+        path: if (nextTimeDeleteGDBfile.exists == true){"null"} // else {gdbPath}
     }
 
     GeodatabaseFeatureTable {
@@ -232,7 +237,7 @@ App {
     }
     //instantiate FileInfo to read last modified date of tpk.
     FileInfo{
-        id:tpkfile
+        id: tpkfile
         filePath: tpkfilepath
     }
 
@@ -275,15 +280,14 @@ App {
         height: zoomButtons.width * 1.4
         color: "darkblue"
 
-        StyleButton{
+        StyleButtonNoFader{
             id: welcomemenu
             anchors.left: parent.left
             anchors.verticalCenter: parent.verticalCenter
-            height:parent.height * 0.9
             anchors.leftMargin: 2
-            width:height
             visible: if(welcomemenucontainer.visible == true || searchmenucontainer.visible ==true){false} else {true}
             iconSource: "images/actions.png"
+            backgroundColor: "transparent"
             onClicked: {
                 console.log("click")
                 if (searchmenucontainer.visible != true){
@@ -310,15 +314,14 @@ App {
             font.weight: Font.DemiBold
         }
 
-        StyleButton{
+        StyleButtonNoFader {
             id: searchmenu
             anchors.right: parent.right
             anchors.verticalCenter: parent.verticalCenter
-            height:parent.height * 0.9
             anchors.rightMargin: 2
-            width:height
             visible: if (welcomemenucontainer.visible == true){false} else {true}
             iconSource: if (searchmenucontainer.visible === true){"images/close.png"} else{"images/search.png"}
+            backgroundColor: "transparent"
             onClicked: {
                 console.log("click searchmenu")
                 if (welcomemenucontainer.visible != true){
@@ -353,7 +356,7 @@ App {
                 }
             }
 
-            StyleButton {
+            StyleButtonNoFader {
                 id: infobutton
                 iconSource: "images/info1.png"
                 width: zoomButtons.width
@@ -363,7 +366,6 @@ App {
                 anchors.margins: app.height * 0.01
                 anchors.bottomMargin: 2
                 onClicked: {
-                    fader.start();
                     console.log("infobutton")
                     infocontainer.visible = true
                     infotext.text = "Select a building via the map or the search menu."
@@ -383,9 +385,10 @@ App {
                 anchors.bottom: zoomButtons.top
                 anchors.left: zoomButtons.left
                 anchors.bottomMargin: 2
+                opacity: zoomButtons.opacity
                 onClicked: {
-                    fader.start();
                     map.mapRotation -= 22.5;
+                    fader.start();
                 }
             }
             StyleButton{
@@ -495,7 +498,7 @@ App {
                    anchors.verticalCenter: parent.verticalCenter
                    spacing: 2
 
-                   StyleButton{
+                   StyleButtonNoFader {
                        id:closeinfobutton
                        height:parent.height
                        width: height
@@ -516,17 +519,19 @@ App {
                    }
                    Text{
                        id:infotext
-                       text: "Some text messages displayed here."
+                       text: "Select a building via the map or the search menu."
                        color: "black"
                        wrapMode: Text.WrapAtWordBoundaryOrAnywhere
                        fontSizeMode: Text.Fit
-                       minimumPointSize: 12
-                       font.pointSize: 16
+                       minimumPointSize: 8
+                       font.pointSize: 14
                        clip:true
                        width:infocontainer.width - closeinfobutton.width - zoomtoinfobutton.width - 4
-                       anchors.verticalCenter: parent.verticalCenter
+                       anchors.top: infobutton.top
+                       anchors.bottom: infobutton.bottom
+                       verticalAlignment: Text.AlignTop
                    }
-                   StyleButton{
+                   StyleButtonNoFader{
                        id:zoomtoinfobutton
                        height:parent.height
                        width: height
@@ -545,7 +550,6 @@ App {
                }
 
             }
-
 
 
             FeatureLayer {
@@ -585,6 +589,11 @@ App {
         anchors.right: app.right
         anchors.left: app.left
         color:"lightgrey"
+
+        MouseArea{
+            anchors.fill: parent
+            onClicked: console.log("clicked welcomeMenu mouse area")
+        }
 
         Rectangle{
             id:titlecontainer
@@ -634,7 +643,10 @@ App {
                     anchors.left: parent.left
                     anchors.right: parent.right
                     anchors.top: parent.top
-                    anchors.margins: 5
+                    anchors.bottomMargin: 5
+                    anchors.topMargin: 5
+                    anchors.leftMargin: 20
+                    anchors.rightMargin: 20
                     placeholderText :"ArcGIS Online Username"
                     style: TextFieldStyle {
                         textColor: "black"
@@ -654,7 +666,10 @@ App {
                     anchors.left: parent.left
                     anchors.right: parent.right
                     anchors.top: userNameField.bottom
-                    anchors.margins: 5
+                    anchors.bottomMargin: 5
+                    anchors.topMargin: 5
+                    anchors.leftMargin: 20
+                    anchors.rightMargin: 20
                     placeholderText :"ArcGIS Online Password"
                     echoMode: TextInput.Password
                     style: TextFieldStyle {
@@ -666,30 +681,51 @@ App {
                         }
                     }
                     }
-            Button{
+            StyleButtonNoFader{
                 id: signInButton
                 visible: true
                 height: parent.height / 3
                 anchors.horizontalCenter: parent.horizontalCenter
                 anchors.top: passwordField.bottom
-                anchors.margins: 1
-                style: ButtonStyle {
-                    label: Text {
-                       renderType: Text.NativeRendering
-                       verticalAlignment: Text.AlignVCenter
-                       horizontalAlignment: Text.AlignHCenter
-                       color: "white"
-                       text: "  Sign In  "
-                       font.weight: Font.DemiBold
-                     }
-                        background: Rectangle {
-                            border.width: control.activeFocus ? 2 : 1
-                            border.color: "#888"
-                            radius: 2
-                            color: "darkblue"
-                        }
-                }
+                anchors.bottom: signInDialogContainer.bottom
+                anchors.margins: 2
+                anchors.rightMargin: 20
+                anchors.leftMargin: 20
+                width: parent.width / 2
+                pressedColor: "white"
+                backgroundColor: "white"
+                focusBorderColor: "blue"
+                borderColor: "black"
                 enabled: if (userNameField.length > 0 && passwordField.length > 0){true} else {false}
+
+                Image {
+                    id: signInButtonIcon
+                    anchors.left: parent.left
+                    anchors.top:parent.top
+                    anchors.bottom: parent.bottom
+                    width: height
+                    source: "images/user.png"
+                    fillMode: Image.Stretch
+                    anchors.margins: 2
+                    opacity: 1
+                }
+                Text{
+                    id: singInButtonText
+                    text: "<b>Sign in</b><br>Required to download and sync all map layers."
+                    anchors.left: signInButtonIcon.right
+                    anchors.top: parent.top
+                    anchors.bottom: parent.bottom
+                    anchors.right: signInButton.right
+                    anchors.margins: 2
+                    wrapMode: Text.WrapAtWordBoundaryOrAnywhere
+                    clip:true
+                    horizontalAlignment:Text.AlignHCenter
+                    fontSizeMode: Text.Fit
+                    minimumPointSize: 4
+                    font.pointSize: 16
+                    verticalAlignment: Text.AlignVCenter
+                    color: "black"
+                }
                 onClicked: {console.log(userNameField.text);
                             console.log(passwordField.text);
                             myUsername = userNameField.text
@@ -699,136 +735,50 @@ App {
                             serviceInfoTask.fetchFeatureServiceInfo()
                             }
             }
-
-            Button{
+            StyleButtonNoFader{
                 id: signedInButton
                 visible: false
-                height: parent.height / 3
-                anchors.horizontalCenter: parent.horizontalCenter
-                anchors.verticalCenter: parent.verticalCenter
-                width: parent.width
-                anchors.margins: 1
-                style: ButtonStyle {
-                    label: Text {
-                       renderType: Text.NativeRendering
-                       verticalAlignment: Text.AlignVCenter
-                       horizontalAlignment: Text.AlignHCenter
-                       color: "white"
-                       text: "Signed in as " + myUsername
-                       font.weight: Font.DemiBold
-                     }
-                        background: Rectangle {
-                            border.width: control.activeFocus ? 2 : 1
-                            border.color: "#888"
-                            radius: 2
-                            color: "darkblue"
-                        }
-                }
-            }
-        }
-
-        Rectangle{
-            id:gdbinfocontainer
-            height: welcomemenucontainer.height / 5
-            width: welcomemenucontainer.width
-            anchors.right:parent.right
-            anchors.left: parent.left
-            anchors.top: signInDialogContainer.bottom
-            color:"white"
-            anchors.margins: 6
-            border.width: 1
-            border.color: "grey"
-
-            Text{
-                id: gdbinfobuttontext
-                anchors.bottom:parent.verticalCenter
-                anchors.horizontalCenter: parent.horizontalCenter
-                color:"black"
-                wrapMode: Text.WrapAtWordBoundaryOrAnywhere
-                width:parent.width
-                height: parent.height / 2
-                clip:true
-                horizontalAlignment:Text.AlignHCenter
-                fontSizeMode: Text.Fit
-                minimumPointSize: 4
-                font.pointSize: 10
-                verticalAlignment: Text.AlignVCenter
-
-            }
-            Button{
-                id: gdbinfoimagebutton
-                height: parent.height / 3
-                anchors.horizontalCenter: parent.horizontalCenter
-                anchors.top: parent.verticalCenter
-                anchors.margins: 1
-                style: ButtonStyle {
-                    label: Text {
-                       renderType: Text.NativeRendering
-                       verticalAlignment: Text.AlignVCenter
-                       horizontalAlignment: Text.AlignHCenter
-                       color: "white"
-                       text: "  Download Now  "
-                       font.weight: Font.DemiBold
-                     }
-                        background: Rectangle {
-                            border.width: control.activeFocus ? 2 : 1
-                            border.color: "#888"
-                            radius: 2
-                            color: "darkblue"
-                        }
-                }
-                onClicked: {
-                    if (gdbfile.exists){
-                            gdbfile.syncgdb();
-                            }
-                    else {
-                        gdbfile.generategdb();
-                    }
-                }
-            }
-            Button{
-                id: gdbDeleteButton
-                anchors.top: gdbinfoimagebutton.top
-                anchors.bottom: gdbinfoimagebutton.bottom
+                height: parent.height * 0.8
+                anchors.left: parent.left
                 anchors.right: parent.right
-                width: height
-                anchors.rightMargin: 10
+                anchors.verticalCenter: parent.verticalCenter
+                anchors.margins: 1
+                anchors.rightMargin: 20
+                anchors.leftMargin: 20
+                width: parent.width
+                pressedColor: "transparent"
+                backgroundColor: "transparent"
+                focusBorderColor: "transparent"
+                borderColor: "transparent"
+                clip: true
+                color: "transparent"
+
                 Image {
-                    anchors.fill: parent
-                    source: "images/replace.png"
+                    id: signedInButtonIcon
+                    anchors.top:parent.top
+                    anchors.bottom: parent.verticalCenter
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    width: height
+                    source: "images/user.png"
                     fillMode: Image.Stretch
+                    anchors.margins: 1
                 }
-                Rectangle{
-                    anchors.fill: parent
-                    color: "transparent"
-                    border.color: "black"
-                    border.width: 1
-                    radius: 2
-                }
-                onClicked: {
-                    console.log("CLICKED gdbDeleteButton --> createNextTimeDeleteFile()")
-                    Helper.createOrRemoveNextTimeDeleteFile()
-                    /*
-                    gdbPath = "~/ArcGIS/AppStudio/Data"
-                    console.log("CLICKED gdbDeleteButton")
-                    map.removeAll()
-                    localBuildingsTable.geodatabase = null
-                    localRoomsTable.geodatabase = null
-                    localLinesTable.geodatabase = null
-                    geodatabaseSyncTask.unregisterGeodatabase(gdb)
-                    gdb.destroy()
-                    gdb.dump()
-                    gdb.path = "null"
-                    gdbfile.filePath = "null"
-                    gdbfile.refresh()
-                    updatesCheckfile.filePath = "null"
-                    console.log(map.layerCount)
-                    gdb.destroy()
-                    syncLogFolder.removeFile("gdb.geodatabase")
-                    syncLogFolder.removeFolder(syncLogFolder.path, true)
-                    syncLogFolder.renameFile("gdb.geodatabase","renamed.geodatabase")
-                    Helper.doorkeeper()
-                    */
+                Text{
+                    id: singedInButtonText
+                    text: "Signed in as " + myUsername
+                    anchors.left: parent.left
+                    anchors.right: parent.right
+                    anchors.top: parent.verticalCenter
+                    anchors.bottom: parent.bottom
+                    anchors.margins: 1
+                    wrapMode: Text.WrapAtWordBoundaryOrAnywhere
+                    clip:true
+                    horizontalAlignment:Text.AlignHCenter
+                    fontSizeMode: Text.Fit
+                    minimumPointSize: 4
+                    font.pointSize: 12
+                    verticalAlignment: Text.AlignVCenter
+                    color: "black"
                 }
             }
         }
@@ -839,75 +789,126 @@ App {
             width: welcomemenucontainer.width
             anchors.right:parent.right
             anchors.left: parent.left
-            anchors.top: gdbinfocontainer.bottom
+            anchors.top: signInDialogContainer.bottom
+            //anchors.top: gdbinfocontainer.bottom
             color:"white"
             anchors.margins: 6
             border.width: 1
             border.color: "grey"
 
             Text{
-                id: tpkinfobuttontext
-                anchors.bottom:parent.verticalCenter
-                anchors.horizontalCenter: parent.horizontalCenter
+                id: tpkinfobuttonheader
+                anchors.bottom:tpkinfoimagebutton.top
+                anchors.top: tpkinfocontainer.top
+                anchors.right:parent.right
+                anchors.left: parent.left
                 color:"black"
                 wrapMode: Text.WrapAtWordBoundaryOrAnywhere
-                width:parent.width
-                height: parent.height / 2
                 clip:true
                 horizontalAlignment:Text.AlignHCenter
                 fontSizeMode: Text.Fit
                 minimumPointSize: 4
-                font.pointSize: 10
+                font.pointSize: 16
+                anchors.margins: 2
                 verticalAlignment: Text.AlignVCenter
+                font.weight: Font.DemiBold
+                text:" Basemap Tile Package "
             }
-            Button{
-                id: tpkinfoimagebutton
+            StyleButtonNoFader{
+                id:tpkinfoimagebutton
                 height: parent.height / 3
-                anchors.horizontalCenter: parent.horizontalCenter
-                anchors.top: parent.verticalCenter
-                anchors.margins: 1
-                style: ButtonStyle {
-                    label: Text {
-                       renderType: Text.NativeRendering
-                       verticalAlignment: Text.AlignVCenter
-                       horizontalAlignment: Text.AlignHCenter
-                       color: "white"
-                       text: "  Download Now  "
-                       font.weight: Font.DemiBold
-                     }
-                        background: Rectangle {
-                            border.width: control.activeFocus ? 2 : 1
-                            border.color: "#888"
-                            radius: 2
-                            color: "darkblue"
-                        }
+                anchors.left: parent.left
+                anchors.right: parent.horizontalCenter
+                anchors.verticalCenter: parent.verticalCenter
+                width: parent.width / 2
+                anchors.rightMargin: 20
+                anchors.leftMargin: 20
+                pressedColor: "white"
+                backgroundColor: "white"
+                focusBorderColor: "black"
+                borderColor: "black"
+
+                Image {
+                    id: tpkinfoimagebuttonIcon
+                    anchors.left: parent.left
+                    anchors.top:parent.top
+                    anchors.bottom: parent.bottom
+                    width: height
+                    source: "images/download.png"
+                    fillMode: Image.Stretch
+                    anchors.margins: 3
                 }
-                onClicked: {
+                Text{
+                    id: tpkinfoimagebuttonText
+                    text: "Download copy to device"
+                    anchors.left: tpkinfoimagebuttonIcon.right
+                    anchors.top: parent.top
+                    anchors.bottom: parent.bottom
+                    anchors.right: tpkinfoimagebutton.right
+                    anchors.margins: 2
+                    wrapMode: Text.WrapAtWordBoundaryOrAnywhere
+                    clip:true
+                    horizontalAlignment:Text.AlignHCenter
+                    fontSizeMode: Text.Fit
+                    minimumPointSize: 4
+                    font.pointSize: 16
+                    verticalAlignment: Text.AlignVCenter
+                   //anchors.left:
+                }
+
+                onClicked:{
+                    console.log("CLICKED tpkDeleteButton")
                     console.log("click middlebutton")
                     tpkFolder.removeFolder(tpkItemId, 1) //delete the tpk from local storage
                     tpkFolder.downloadThenAddLayer() //download and add the tpk layer
                 }
             }
-            Button{
-                id: tpkDeleteButton
+            StyleButtonNoFader{
+                id:tpkDeleteButton
                 anchors.top: tpkinfoimagebutton.top
                 anchors.bottom: tpkinfoimagebutton.bottom
+                anchors.left: parent.horizontalCenter
                 anchors.right: parent.right
-                width: height
-                anchors.rightMargin: 10
+                width: parent.width / 2
+                anchors.rightMargin: 20
+                anchors.leftMargin: 20
+                pressedColor: "white"
+                backgroundColor: "white"
+                focusBorderColor: "blue"
+                borderColor: if (tpkfile.exists == true){"black"} else {"lightgrey"}
+                enabled: if (tpkfile.exists == true){true} else {false}
+
 
                 Image {
-                    anchors.fill: parent
+                    id: tpkDeleteButtonIcon
+                    anchors.left: parent.left
+                    anchors.top:parent.top
+                    anchors.bottom: parent.bottom
+                    width: height
                     source: "images/DeleteWinIcon.png"
                     fillMode: Image.Stretch
+                    anchors.margins: 2
+                    opacity: if (tpkfile.exists == true){1} else {0.40}
                 }
-                Rectangle{
-                    anchors.fill: parent
-                    color: "transparent"
-                    border.color: "black"
-                    border.width: 1
-                    radius: 2
+                Text{
+                    id: tpkDeleteButtonText
+                    text: "Remove copy from device"
+                    anchors.left: tpkDeleteButtonIcon.right
+                    anchors.top: parent.top
+                    anchors.bottom: parent.bottom
+                    anchors.right: tpkDeleteButton.right
+                    anchors.margins: 2
+                    wrapMode: Text.WrapAtWordBoundaryOrAnywhere
+                    clip:true
+                    horizontalAlignment:Text.AlignHCenter
+                    fontSizeMode: Text.Fit
+                    minimumPointSize: 4
+                    font.pointSize: 16
+                    verticalAlignment: Text.AlignVCenter
+                    color: if (tpkfile.exists == true){"black"} else {"lightgrey"}
+                   //anchors.left:
                 }
+
                 onClicked:{
                     console.log("CLICKED tpkDeleteButton")
                     map.removeLayerByIndex(0)
@@ -915,8 +916,206 @@ App {
                     Helper.doorkeeper()
                 }
             }
+            Text{
+                id: tpkinfobuttontext
+                anchors.top:tpkinfoimagebutton.bottom
+                anchors.bottom: tpkinfocontainer.bottom
+                anchors.right:parent.right
+                anchors.left: parent.left
+                anchors.topMargin:6
+                anchors.bottomMargin: 2
+                anchors.leftMargin: 20
+                anchors.rightMargin: 20
+                color:"black"
+                wrapMode: Text.WrapAtWordBoundaryOrAnywhere
+                clip:true
+                horizontalAlignment:Text.AlignHCenter
+                fontSizeMode: Text.Fit
+                minimumPointSize: 4
+                font.pointSize: 10
+                verticalAlignment: Text.AlignVCenter
+            }
         }
 
+        Rectangle{
+            id:gdbinfocontainer
+            height: welcomemenucontainer.height / 5
+            width: welcomemenucontainer.width
+            anchors.right:parent.right
+            anchors.left: parent.left
+            anchors.top: tpkinfocontainer.bottom
+            //anchors.top: signInDialogContainer.bottom
+            color:"white"
+            anchors.margins: 6
+            border.width: 1
+            border.color: "grey"
+
+            Text{
+                id: gdbinfobuttonheader
+                anchors.bottom:gdbinfoimagebutton.top
+                anchors.top: gdbinfocontainer.top
+                anchors.right:parent.right
+                anchors.left: parent.left
+                color:"black"
+                wrapMode: Text.WrapAtWordBoundaryOrAnywhere
+                clip:true
+                horizontalAlignment:Text.AlignHCenter
+                fontSizeMode: Text.Fit
+                minimumPointSize: 4
+                font.pointSize: 16
+                anchors.margins: 2
+                verticalAlignment: Text.AlignVCenter
+                font.weight: Font.DemiBold
+                text:" Operational Feature Layers "
+            }
+
+            StyleButtonNoFader{
+                id:gdbinfoimagebutton
+                height: parent.height / 3
+                anchors.left: parent.left
+                anchors.right: parent.horizontalCenter
+                anchors.verticalCenter: parent.verticalCenter
+                width: parent.width / 2
+                anchors.rightMargin: 20
+                anchors.leftMargin: 20
+                pressedColor: "white"
+                backgroundColor: "white"
+                focusBorderColor: if (gdbinfoimagebutton.enabled == false){"lightgrey"}else{"black"}
+                borderColor: if (gdbinfoimagebutton.enabled == false){"lightgrey"}else{"black"}
+                enabled: false
+
+                Image {
+                    id: gdbinfoimagebuttonIcon
+                    anchors.left: parent.left
+                    anchors.top:parent.top
+                    anchors.bottom: parent.bottom
+                    width: height
+                    source: "images/download.png"
+                    fillMode: Image.Stretch
+                    anchors.margins: 3
+                    opacity: if (gdbinfoimagebutton.enabled == false){0.4}else{1}
+                }
+                Text{
+                    id: gdbinfoimagebuttonText
+                    text: "Download/Sync device copy"
+                    anchors.left: gdbinfoimagebuttonIcon.right
+                    anchors.top: parent.top
+                    anchors.bottom: parent.bottom
+                    anchors.right: gdbinfoimagebutton.right
+                    anchors.margins: 2
+                    wrapMode: Text.WrapAtWordBoundaryOrAnywhere
+                    clip:true
+                    horizontalAlignment:Text.AlignHCenter
+                    fontSizeMode: Text.Fit
+                    minimumPointSize: 4
+                    font.pointSize: 16
+                    verticalAlignment: Text.AlignVCenter
+                    color: if (gdbinfoimagebutton.enabled == false){"lightgrey"}else{"black"}
+                }
+
+                onClicked:{
+                    if (gdbfile.exists){
+                            gdbfile.syncgdb();
+                            }
+                    else {
+                        gdbfile.generategdb();
+                    }
+                }
+                Rectangle{
+                    id:rectangleBlockGDBDownloadUntilTPKisPresent
+                    anchors.fill: parent
+                    color: "white"
+                    opacity: if(tpkfile.exists == false){0.5}else{0}
+                }
+
+                MouseArea{
+                    id: mouseAreaBlockGDBDownloadUntilTPKisPresent
+                    anchors.fill: parent
+                    enabled: if(tpkfile.exists == false){true}else{false}
+                    onClicked: console.log("clicked mouseAreaBlockGDBDownloadUntilTPKisPresent")
+                }
+            }
+
+            StyleButtonNoFader{
+                id:gdbDeleteButton
+                anchors.top: gdbinfoimagebutton.top
+                anchors.bottom: gdbinfoimagebutton.bottom
+                anchors.left: parent.horizontalCenter
+                anchors.right: parent.right
+                width: parent.width / 2
+                anchors.rightMargin: 20
+                anchors.leftMargin: 20
+                pressedColor: "white"
+                backgroundColor: "white"
+                focusBorderColor: "blue"
+                borderColor: if (gdbfile.exists == true){"black"} else {"lightgrey"}
+                enabled: if (gdbfile.exists == true){true} else {false}
+
+                Image {
+                    id: gdbDeleteButtonIcon
+                    anchors.left: parent.left
+                    anchors.top:parent.top
+                    anchors.bottom: parent.bottom
+                    width: height
+                    source: "images/DeleteWinIcon.png"
+                    fillMode: Image.Stretch
+                    anchors.margins: 2
+                    opacity: if (gdbfile.exists == true){1} else {0.40}
+                }
+                Text{
+                    id: gdbDeleteButtonText
+                    text: "Remove copy from device"
+                    anchors.left: gdbDeleteButtonIcon.right
+                    anchors.top: parent.top
+                    anchors.bottom: parent.bottom
+                    anchors.right: gdbDeleteButton.right
+                    anchors.margins: 2
+                    wrapMode: Text.WrapAtWordBoundaryOrAnywhere
+                    clip:true
+                    horizontalAlignment:Text.AlignHCenter
+                    fontSizeMode: Text.Fit
+                    minimumPointSize: 4
+                    font.pointSize: 16
+                    verticalAlignment: Text.AlignVCenter
+                    color: if (gdbfile.exists == true){"black"} else {"lightgrey"}
+                    enabled: if (gdbfile.exists == true){true}else{false}
+                }
+                onClicked:{
+                    //this if else statment is a workaround to the fact that nextTimeDeleteGDBfile.exists always evaluates to false for some reason.
+                    if (gdbDeleteButtonText.text === "Undo"){
+                            syncLogFolder.removeFile("nextTimeDeleteGDB.txt")
+                            gdbDeleteButtonText.text = "Remove copy from device"
+                            Helper.doorkeeper()
+                        }
+                    else if (nextTimeDeleteGDBfile.exists == false){
+                            syncLogFolder.writeFile("nextTimeDeleteGDB.txt","Offline Geodatabase will be deleted the next time the app is being started.")
+                            gdbDeleteButtonText.text = "Undo"
+                            gdbinfobuttontext.text = '<b><font color="red"> Device copy of operational layers set to be removed next time app is opened. </font><\b>'
+                        }
+
+                }
+            }
+            Text{
+                id: gdbinfobuttontext
+                anchors.top:gdbinfoimagebutton.bottom
+                anchors.bottom: gdbinfocontainer.bottom
+                anchors.right:parent.right
+                anchors.left: parent.left
+                anchors.topMargin:6
+                anchors.bottomMargin: 2
+                anchors.leftMargin: 20
+                anchors.rightMargin: 20
+                color:"black"
+                wrapMode: Text.WrapAtWordBoundaryOrAnywhere
+                clip:true
+                horizontalAlignment:Text.AlignHCenter
+                fontSizeMode: Text.Fit
+                minimumPointSize: 4
+                font.pointSize: 10
+                verticalAlignment: Text.AlignVCenter
+                text: " Download floor plan operational layers to be able to proceed. (Requires Sign in and downloaded basemap tile package.)"
+            }
+        }
 
         Rectangle{
             id:proceedbuttoncontainer
@@ -924,11 +1123,13 @@ App {
             anchors.right:parent.right
             anchors.left: parent.left
             anchors.bottom: welcomemenucontainer.bottom
-            anchors.top:tpkinfocontainer.bottom
-            color:"green"
+            anchors.top: gdbinfocontainer.bottom
+            //anchors.top:tpkinfocontainer.bottom
+            color: if (!tpkFolder.exists || !gdbfile.exists){"red"} else{"green"}
             anchors.margins: 6
             border.color: "grey"
             border.width: 1
+            clip: true
 
             function proceedToMap(){
                 console.log("proceedToMap")
@@ -944,6 +1145,7 @@ App {
                 width: height
                 anchors.top:proceedbuttoncontainer.top
                 anchors.horizontalCenter: proceedbuttoncontainer.horizontalCenter
+                enabled: if (!tpkFolder.exists || !gdbfile.exists){false}else{true}
                 onClicked: {
                     proceedbuttoncontainer.proceedToMap();
                 }
@@ -952,6 +1154,7 @@ App {
             Text{
                 id:proceedtomaptext
                 anchors.top:proceedtomapimagebutton.bottom
+                anchors.bottom: parent.bottom
                 anchors.horizontalCenter: parent.horizontalCenter
                 color:"white"
                 text: "Go to Map"
@@ -964,6 +1167,7 @@ App {
             MouseArea{
                 id:proceedbuttoncontainermousearea
                 anchors.fill: proceedbuttoncontainer
+                enabled: if (!tpkFolder.exists || !gdbfile.exists){false}else{true}
                 onClicked: {
                     proceedbuttoncontainer.proceedToMap();
                 }
@@ -1035,7 +1239,7 @@ App {
                 anchors.left: parent.left
                 Column {
                     Text { text: bldgname + ' (#' + bldgid + ')'; font.pointSize: 16}
-                    Text { text: objectid ; visible: true}
+                    Text { text: objectid ; visible: false}
                     anchors.left:parent.left
                 }
                 MouseArea {
@@ -1047,6 +1251,7 @@ App {
                         searchField.text = ""
                         searchmenucontainer.visible = false
                         Helper.updateBuildingDisplay(foo);
+                        Qt.inputMethod.hide();
                         }
                 }
             }
@@ -1071,13 +1276,15 @@ App {
             console.log("Helper.deleteGDB()")
         }
         else{
+            gdbfile.refresh()
+            gdb.path = gdbPath //setting this earlier leads to locked gdb file that can't be deleted
             Helper.getAllBldgs()
             Helper.addAllLayers()
             serviceInfoTask.fetchFeatureServiceInfo();
         }
         tpkFolder.addLayer()
         Helper.doorkeeper()
-
+        buttonRotateCounterClockwise.fader.start()
     }
 }
 

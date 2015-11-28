@@ -1,22 +1,8 @@
 //------------------------------------------------------------------------------
-//SOME TESTNG STUUF HERE.
-function helperSayHi(){
-    console.log("Helper says Hi.")
-}
-
-function createOrRemoveNextTimeDeleteFile(){
-    if (nextTimeDeleteGDBfile.exists == false){
-        gdbinfobuttontext.text = " Device copy of operational layers set to be removed next time app is opened. "
-        syncLogFolder.writeFile("nextTimeDeleteGDB.txt","Offline Geodatabase will be deleted the next time the app is being started and this file exisits... workaroudn to suspected bug locking te .geodatabase while app is already loaded:)")
-    }
-    else {syncLogFolder.removeFile("nextTimeDeleteGDB.txt")
-        gdbinfobuttontext.text = " Reset to NOT delete local device copy next time app is opened. "
-    }
-}
-
+//
 function deleteGDB(){
+    //geodatabaseSyncTask.unregisterGeodatabase(gdb)
     console.log("Helper executed deleteGDB()")
-    syncLogFolder.removeFile("gdb.geodatabase", true)
     syncLogFolder.removeFolder(syncLogFolder.path, true);
 }
 
@@ -120,33 +106,25 @@ function doorkeeper(){
     if (gdbfile.exists){gdbfile.refresh()};
     if (tpkfile.exists){tpkfile.refresh()};
 
-    if (!gdbfile.exists) {
-        gdbinfobuttontext.text = " Download floor plan operational layers to be able to proceed. "
+    if (gdbfile.exists && updatesCheckfile.exists) {
+        gdbinfobuttontext.text = " Sync updates for floor plan operational layers. Last updates downloaded " + updatesCheckfile.lastModified.toLocaleString("MM.dd.yyyy hh:mm ap") + "."
     }
-    else if (updatesCheckfile.exists) {
-        //TODO: if layer are added to the map lastmodified date doesn't chnage. Poible solution: a removAllLayers() function equivlent to addAllLayers()-->doesnt work. need to cange this date reporting thing (write to other json file)
-        gdbinfobuttontext.text = " Download updates for floor plan operational layers. Last updates downloaded " + updatesCheckfile.lastModified.toLocaleString("MM.dd.yyyy hh:mm ap") + "."
-    }
-    else {gdbinfobuttontext.text = " Download updates for floor plan operational layers. Last updates downloaded " + gdbfile.lastModified.toLocaleString("MM.dd.yyyy hh:mm ap") + "."
+    if (gdbfile.exists && !updatesCheckfile.exists) {
+        gdbinfobuttontext.text = " Sync updates for floor plan operational layers. App is unable to determine when updates were last synced."
     }
 
+    //to the fact that nextTimeDeleteGDBfile.exists always evaluates to false for some reason.
+    if (gdbDeleteButtonText.text === "Undo"){
+        gdbinfobuttontext.text = '<b><font color="red"> Device copy of operational layers set to be removed next time app is opened. </font><\b>'
+    }
+
+    //this text is better set like so instead of putting the property on watch because the tpk download also modifies it
     if (!tpkFolder.exists){
         tpkinfobuttontext.text = " Download the basemap tile package to be able to proceed. "
     }
-    else {tpkinfobuttontext.text = " Download updates for background map layer. Last updates downloaded " + tpkfile.lastModified.toLocaleString("MM.dd.yyyy hh:mm ap") + "."
-    }
-
-    if (!tpkFolder.exists || !gdbfile.exists){
-        proceedbuttoncontainer.color = "red"
-        proceedbuttoncontainermousearea.enabled = false
-        proceedtomapimagebutton.enabled = false
-    }
-    else{proceedbuttoncontainer.color = "green"
-        proceedbuttoncontainermousearea.enabled = true
-        proceedtomapimagebutton.enabled = true
+    else {tpkinfobuttontext.text = " Last downloaded " + tpkfile.lastModified.toLocaleString("MM.dd.yyyy hh:mm ap") + ". "
     }
 }
-
 
 //----------------------------------------------------------------------
 //add all layers to the map

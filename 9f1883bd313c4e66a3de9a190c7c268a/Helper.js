@@ -18,8 +18,9 @@ function buildAllBlgdList(iterator){
          var objectID = (feature.attributeValue("OBJECTID").toString())
          var bldgID = (feature.attributeValue(bldgLyr_bldgIdField))
          var bldgName = (feature.attributeValue(bldgLyr_nameField))
-         allBlgdList.push([objectID, bldgID, bldgName]);
+         allBlgdList.push([objectID, bldgName, bldgID]);
    }
+   allBlgdList.sort(compareBySecondArrayElement)
 }
 
 //----------------------------------------------------------------------
@@ -27,9 +28,9 @@ function buildAllBlgdList(iterator){
 function reloadFullBldgListModel(){
     bldglistmodel.clear();
     for( var i=0; i < allBlgdList.length ; ++i ) {
-    bldglistmodel.append({"bldgname" : allBlgdList[i][2],
+    bldglistmodel.append({"bldgname" : allBlgdList[i][1],
                           "objectid" : allBlgdList[i][0],
-                          "bldgid" : allBlgdList[i][1]
+                          "bldgid" : allBlgdList[i][2]
                          })
     }
 }
@@ -39,10 +40,10 @@ function reloadFullBldgListModel(){
 function reloadFilteredBldgListModel(bldgname) {
     bldglistmodel.clear();
     for( var i=0; i < allBlgdList.length ; ++i ) {
-        if (allBlgdList[i][2].toLowerCase().indexOf(bldgname.toLowerCase()) >= 0){
-        bldglistmodel.append({"bldgname" : allBlgdList[i][2],
+        if (allBlgdList[i][1].toLowerCase().indexOf(bldgname.toLowerCase()) >= 0){
+        bldglistmodel.append({"bldgname" : allBlgdList[i][1],
                              "objectid" : allBlgdList[i][0],
-                             "bldgid" : allBlgdList[i][1]})
+                             "bldgid" : allBlgdList[i][2]})
         };
     }
 }
@@ -61,7 +62,7 @@ function compareBySecondArrayElement(a, b) {
         return 0;
     }
     else {
-        return (a[1] > b[1]) ? -1 : 1;
+        return (a[1] < b[1]) ? -1 : 1;
     }
 }
 
@@ -124,14 +125,6 @@ function doorkeeper(){
     }
     else {tpkinfobuttontext.text = " Last downloaded " + tpkfile.lastModified.toLocaleString("MM.dd.yyyy hh:mm ap") + ". "
     }
-}
-
-//----------------------------------------------------------------------
-//add all layers to the map
-function addAllLayers(){
-    map.insertLayer(localBuildingsLayer,1);
-    map.insertLayer(localRoomsLayer,2);
-    map.insertLayer(localLinesLayer, 3);
 }
 
 //----------------------------------------------------------------------

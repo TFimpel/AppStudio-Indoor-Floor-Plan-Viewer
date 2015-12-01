@@ -57,7 +57,7 @@ App {
 
     property string lineLyr_bldgIdField: "BUILDING"
     property string lineLyr_floorIdField: "FLOOR"
-    property string lineLyr_sortField: "OBJECTID"
+    property string lineLyr_sortField: "FLOOR"
 
     property string roomLyr_bldgIdField: "BUILDING"
     property string roomLyr_floorIdField: "FLOOR"
@@ -75,7 +75,9 @@ App {
     property string syncLogFolderPath: "~/ArcGIS/AppStudio/Apps/" + appItemId + "/Data"
     property string updatesCheckfilePath: "~/ArcGIS/AppStudio/Apps/" + appItemId + "/Data/syncLog.txt"
     property string nextTimeDeleteGDBfilePath: "~/ArcGIS/AppStudio/Apps/" + appItemId + "/Data/nextTimeDeleteGDB.txt"
-    property string featuresUrl: "http://services.arcgis.com/8df8p0NlLFEShl0r/arcgis/rest/services/UMNTCCampusMini4/FeatureServer"
+
+    //make app parameter
+    property string featuresUrl: "http://services.arcgis.com/8df8p0NlLFEShl0r/arcgis/rest/services/WestBank_Floors/FeatureServer"
 
     FileInfo {
         id: nextTimeDeleteGDBfile
@@ -214,7 +216,8 @@ App {
     }
 
     //define place to store local tile package and define FileFolder object
-    property string tpkItemId : "0ae5d71749504e9784ac0d69ea27110f"
+    //make app parameter
+    property string tpkItemId : "504e5db503d7432b89042c196d8cbf57"
     FileFolder {
         id: tpkFolder
         path: "~/ArcGIS/AppStudio/Data/" + tpkItemId
@@ -225,13 +228,12 @@ App {
             var newFilePath = tpkFolder.path + "/" + filesList[0];
             newLayer.path = newFilePath;
             tpkfilepath = newFilePath;
-            map.insertLayer(newLayer,0);//insert it at the bottom of the layer stack
-            map.addLayer(newLayer)
+            map.insertLayer(newLayer,1);//insert above the baseLayer so zoom in is unlimited by tpk LOD's
             map.extent = newLayer.extent
         }
 
         function downloadThenAddLayer(){
-            map.removeLayerByIndex(0)
+            map.removeLayerByIndex(1)
             downloadTpk.download(tpkItemId);
         }
     }
@@ -259,6 +261,12 @@ App {
             tpkFolder.addLayer();
             console.log(tpkFolder.path)
             Helper.doorkeeper();
+            //try this if statement here because Helper.doorkeper doesn't refresh whetehr it exist or not
+            if (gdbfile.exists){
+                proceedbuttoncontainer.color = "green";
+                proceedbuttoncontainermousearea.enabled = true
+                proceedtomapimagebutton.enabled = true
+            }
         }
         onDownloadError: {
             tpkinfobuttontext.text = "Download failed"
@@ -366,7 +374,6 @@ App {
                 anchors.margins: app.height * 0.01
                 anchors.bottomMargin: 2
                 onClicked: {
-                    console.log("infobutton")
                     infocontainer.visible = true
                     infotext.text = "Select a building via the map or the search menu."
                 }
@@ -419,7 +426,7 @@ App {
                 height: ((floorListView.count * width) > (mapcontainer.height - zoomButtons.width*1.5)) ? (mapcontainer.height - zoomButtons.width*1.5)  :  (floorListView.count * width)
                 color: zoomButtons.borderColor
                 border.color: zoomButtons.borderColor
-                border.width: zoomButtons.borderWidth
+                border.width: 1
                 visible: false
 
                 ListView{
@@ -527,8 +534,8 @@ App {
                        font.pointSize: 14
                        clip:true
                        width:infocontainer.width - closeinfobutton.width - zoomtoinfobutton.width - 4
-                       anchors.top: infobutton.top
-                       anchors.bottom: infobutton.bottom
+                       anchors.top: closeinfobutton.top
+                       anchors.bottom: closeinfobutton.bottom
                        verticalAlignment: Text.AlignTop
                    }
                    StyleButtonNoFader{
@@ -546,12 +553,15 @@ App {
                            map.zoomTo(localBuildingsLayer.featureTable.feature(currentBuildingObjectID).geometry)
                        }
                    }
-
                }
-
             }
 
-
+            FeatureLayer {
+                id: baseLayer
+                featureTable: localBuildingsTable
+                visible: false
+                enableLabels: false
+            }
             FeatureLayer {
                 id: localBuildingsLayer
                 featureTable: localBuildingsTable
@@ -608,7 +618,11 @@ App {
             border.color: "grey"
             Text{
                 id:appdescription
-                anchors.top: apptitle.bottom
+                anchors.top: parent.top
+                anchors.bottom: parent.bottom
+                anchors.right: parent.right
+                anchors.left: parent.left
+                anchors.margins: 5
                 height: parent.height
                 width:parent.width
                 wrapMode: Text.WrapAtWordBoundaryOrAnywhere
@@ -911,7 +925,7 @@ App {
 
                 onClicked:{
                     console.log("CLICKED tpkDeleteButton")
-                    map.removeLayerByIndex(0)
+                    map.removeLayerByIndex(1)
                     tpkFolder.removeFolder(tpkFolder.path, true) //delete the tpk from local storage
                     Helper.doorkeeper()
                 }
@@ -1133,7 +1147,6 @@ App {
 
             function proceedToMap(){
                 console.log("proceedToMap")
-                Helper.addAllLayers()
                 welcomemenucontainer.visible = false
                 Helper.getAllBldgs()//builds the list used for building search
             }
@@ -1269,6 +1282,9 @@ App {
 //---------------------------------------------------------------------------------------------
 
     Component.onCompleted: {
+        if (tpkFolder.exists){
+            tpkFolder.addLayer()
+        }
         if (nextTimeDeleteGDBfile.exists == true){
             console.log(gdb.path)
             console.log(gdbfile.filePath)
@@ -1279,12 +1295,11 @@ App {
             gdbfile.refresh()
             gdb.path = gdbPath //setting this earlier leads to locked gdb file that can't be deleted
             Helper.getAllBldgs()
-            Helper.addAllLayers()
             serviceInfoTask.fetchFeatureServiceInfo();
         }
-        tpkFolder.addLayer()
         Helper.doorkeeper()
         buttonRotateCounterClockwise.fader.start()
+        console.log(map.layerCount)
     }
 }
 

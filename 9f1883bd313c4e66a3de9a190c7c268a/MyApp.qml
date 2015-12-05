@@ -12,8 +12,6 @@ import ArcGIS.AppFramework.Runtime 1.0
 import ArcGIS.AppFramework.Runtime.Controls 1.0
 import ArcGIS.AppFramework.Runtime.Dialogs 1.0
 
-
-
 import "Helper.js" as Helper
 
 App {
@@ -25,17 +23,10 @@ App {
         id: userCredentials
         userName: myUsername
         password: myPassword
-
-        onError: console.log("ERROR")
-        onTokenChanged: console.log("token changed")
-        //onAuthenticatingHostChanged: consolelog("AuthenticatingHostChanged")
-        onPasswordChanged: console.log("PasswordChanged")
-        //onTypeChanged: console.log("TypeChanged")
     }
 
 //--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-//BEGIN INITIALIZING SOME GLOBAL VARIABLES USED FOR VARIOUS ODDS AND ENDS
-
+//BEGIN INITIALIZING SOME GLOBAL VARIABLES
     //define variables to hold the username and password
     property string myUsername: ""
     property string myPassword: ""
@@ -51,7 +42,7 @@ App {
     //define global variable to hold list of buildings for search menu
     property var allBlgdList: []
 
-    //define relevant field names. Ultimately these should all be configurable.
+    //define relevant field names. Ultimately these should all be configurable app parameters
     property string bldgLyr_nameField: "NAME"
     property string bldgLyr_bldgIdField: "BUILDING_NUMBER"
 
@@ -63,22 +54,30 @@ App {
     property string roomLyr_floorIdField: "FLOOR"
     property string roomLyr_roomIdField: "ROOM"
 
-//END INITIALIZING SOME GLOBAL VARIABLES USED FOR VARIOUS ODDS AND ENDS
+//END INITIALIZING SOME GLOBAL VARIABLES
 //--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 //--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 //BEGIN DOWNOAD AND SYNC MECHANISM SETUP
 
-    //Define place to store local geodatabase
-    //Set up components for generate, sync, and remove functionality
+    //Define place to store local geodatabase.
+    //Store in .../Apps/appItemId/... so that if app is removed all data is removed as well.
+    //Set up components for generate, sync, and remove functionality.
     property string appItemId: app.info.itemId
     property string gdbPath: "~/ArcGIS/AppStudio/Apps/" + appItemId + "/Data/gdb.geodatabase"
     property string syncLogFolderPath: "~/ArcGIS/AppStudio/Apps/" + appItemId + "/Data"
+
+    //a file that is used to track when .geodatabase was last synced
     property string updatesCheckfilePath: "~/ArcGIS/AppStudio/Apps/" + appItemId + "/Data/syncLog.txt"
+
+    //a file that is used to track whether .geodatabase should be deleted when app is reopened.
+    //see https://geonet.esri.com/message/570264?et=watches.email.thread#570264
     property string nextTimeDeleteGDBfilePath: "~/ArcGIS/AppStudio/Apps/" + appItemId + "/Data/nextTimeDeleteGDB.txt"
 
-    //make app parameter
+    //the secured feature service from which the .geodatabase will replicated. make configurable app parameter
     property string featuresUrl: "http://services.arcgis.com/8df8p0NlLFEShl0r/arcgis/rest/services/WestBank_Floors/FeatureServer"
 
+
+    //use this file to keep track of whether the .geodatabase shuld be deleted next time app is opened
     FileInfo {
         id: nextTimeDeleteGDBfile
         filePath: nextTimeDeleteGDBfilePath
@@ -86,23 +85,30 @@ App {
 
     FileInfo {
         id: gdbfile
-        //filePath: gdbPath
+        //if to be deleted from device then set path to "null" to avoid file locking
         filePath: if (nextTimeDeleteGDBfile.exists == true){"null"} else {gdbPath}
 
 
         function generategdb(){
             generateGeodatabaseParameters.initialize(serviceInfoTask.featureServiceInfo);
+
+            //the tpk extent is used to determine the .geodatabase extent
             generateGeodatabaseParameters.extent = map.extent;
             generateGeodatabaseParameters.returnAttachments = false;
             geodatabaseSyncTask.generateGeodatabase(generateGeodatabaseParameters, gdbPath);
+
+            //prevent user from going to the map while .geodatabase generation is in progress
             proceedbuttoncontainer.color = "red"
             proceedbuttoncontainermousearea.enabled = false
             proceedtomapimagebutton.enabled = false
         }
+
         function syncgdb(){
             gdb.path = gdbPath //if this is not set then function fails with "QFileInfo::absolutePath: Constructed with empty filename" message.
             gdbinfobuttontext.text = " Downloading updates now...this may take some time. "
             geodatabaseSyncTask.syncGeodatabase(gdb.syncGeodatabaseParameters, gdb);
+
+            //prevent user from ging to the map while .geodatabase syncing is in progress
             proceedbuttoncontainer.color = "red"
             proceedbuttoncontainermousearea.enabled = false
             proceedtomapimagebutton.enabled = false
@@ -114,11 +120,14 @@ App {
         id: updatesCheckfile
         filePath: updatesCheckfilePath
     }
+
+    //referenced by a variety of housekeeping tasks (not only sync-logging... change misleading name)
     FileFolder{
         id:syncLogFolder
         path: syncLogFolderPath
     }
 
+    //reference to feature service from which to generate the .geodatabase
     ServiceInfoTask{
         id: serviceInfoTask
         url: featuresUrl
@@ -127,6 +136,8 @@ App {
 
         onFeatureServiceInfoStatusChanged: {
             if (featureServiceInfoStatus === Enums.FeatureServiceInfoStatusCompleted) {
+
+                //once user authenticated successfully to feature service rearrange the user interface
                 Helper.doorkeeper()
                 userNameField.visible = false
                 passwordField.visible = false
@@ -166,6 +177,7 @@ App {
 
         onSyncStatusChanged: {
             if (syncStatus === Enums.SyncStatusCompleted) {
+                //create/update file that keeps track of when last synced
                 Helper.writeSyncLog()
                 gdbinfobuttontext.text = "Downloading/Syncing updates completed"
                 Helper.doorkeeper()
@@ -173,6 +185,7 @@ App {
             }
             if (syncStatus === Enums.SyncStatusErrored)
                 gdbinfobuttontext.text = "Sync GDB Error: " + syncGeodatabaseError.message + " Code= "  + syncGeodatabaseError.code.toString() + " "  + syncGeodatabaseError.details + "  Make sure you have internet connectivity and are signed in. " ;
+                //even if sync errs user still allowed to proceed to map
                 proceedbuttoncontainer.color = "green"
                 proceedbuttoncontainermousearea.enabled = true
                 proceedtomapimagebutton.enabled = true
@@ -182,7 +195,10 @@ App {
     //set up components for operational map layers: buildings, room-polygons, lines
     Geodatabase{
         id: gdb
-        path: if (nextTimeDeleteGDBfile.exists == true){"null"} // else {gdbPath}
+        //set path to "null" initially. once app is loaded we set this path properly.
+        //done to avoid file locking. applying if/else dependi g on whetehr
+        //gdbdeletefile exists doesn't work here for some reason.
+        path: "null"
     }
 
     GeodatabaseFeatureTable {
@@ -190,7 +206,8 @@ App {
         geodatabase: gdb.valid ? gdb : null
         featureServiceLayerId: 0
         onQueryFeaturesStatusChanged: {
-            console.log("onQueryFeaturesStatusChanged localLinesTable")
+            //this is used to build the floor list.
+            //assumption is that there is one row per building-floor
             if (queryFeaturesStatus === Enums.QueryFeaturesStatusCompleted) {
                 Helper.populateFloorListView(queryFeaturesResult.iterator, currentBuildingID , lineLyr_sortField)
             }
@@ -208,9 +225,10 @@ App {
         geodatabase: gdb.valid ? gdb : null
         featureServiceLayerId: 2
         onQueryFeaturesStatusChanged: {
+            //this is used to build the building search list
+            //assumption is that there is one row per building
             if (queryFeaturesStatus === Enums.QueryFeaturesStatusCompleted) {
                 Helper.buildAllBlgdList(queryFeaturesResult.iterator)
-                console.log("Helper.buildAllBlgdList(queryFeaturesResult.iterator)")
                 }
         }
     }
@@ -220,6 +238,8 @@ App {
     property string tpkItemId : "504e5db503d7432b89042c196d8cbf57"
     FileFolder {
         id: tpkFolder
+        //currently not possible to save in .../Apps/appItemId/... folderName
+        //see https://geonet.esri.com/message/544407#544407
         path: "~/ArcGIS/AppStudio/Data/" + tpkItemId
 
         function addLayer(){
@@ -233,7 +253,7 @@ App {
         }
 
         function downloadThenAddLayer(){
-            map.removeLayerByIndex(1)
+            if (tpkfile.exists == true){map.removeLayerByIndex(1)};
             downloadTpk.download(tpkItemId);
         }
     }
@@ -248,7 +268,6 @@ App {
     ItemPackage {
         id: downloadTpk
         onDownloadStarted: {
-            console.log("Download started")
             tpkinfobuttontext.text = "Download starting... 0%"
         }
         onDownloadProgress: {
@@ -261,7 +280,7 @@ App {
             tpkFolder.addLayer();
             console.log(tpkFolder.path)
             Helper.doorkeeper();
-            //try this if statement here because Helper.doorkeper doesn't refresh whetehr it exist or not
+            //if statement here because Helper.doorkeper doesn't refresh whether it exist or not
             if (gdbfile.exists){
                 proceedbuttoncontainer.color = "green";
                 proceedbuttoncontainermousearea.enabled = true
@@ -286,6 +305,7 @@ App {
         anchors.horizontalCenter: parent.horizontalCenter
         width:parent.width
         height: zoomButtons.width * 1.4
+        //make configurable app parameter
         color: "darkblue"
 
         StyleButtonNoFader{
@@ -297,7 +317,6 @@ App {
             iconSource: "images/actions.png"
             backgroundColor: "transparent"
             onClicked: {
-                console.log("click")
                 if (searchmenucontainer.visible != true){
                     proceedtomaptext.text  = "Back to Map"
                     welcomemenucontainer.visible = true
@@ -307,7 +326,7 @@ App {
         }
         Text{
             id:titletext
-            text:"Floor Plan Viewer"
+            text:"Floor Plan Viewer" //make configurable app paramter
             anchors.horizontalCenter: parent.horizontalCenter
             anchors.verticalCenter: parent.verticalCenter
             height:parent.height
@@ -318,7 +337,7 @@ App {
             clip:true
             verticalAlignment: Text.AlignVCenter
             horizontalAlignment:  Text.AlignHCenter
-            color:"white"
+            color:"white" //make configurable app paramter
             font.weight: Font.DemiBold
         }
 
@@ -379,7 +398,7 @@ App {
                 }
             }
             ZoomButtons {
-                id:zoomButtons
+                id:zoomButtons //note that a lot of elements reference this element's height and width.
                 anchors.left: parent.left
                 anchors.bottom: infobutton.top
                 anchors.margins: app.height * 0.01
@@ -439,7 +458,7 @@ App {
                         Rectangle {
                                 color: "transparent";
                                 radius: 4;
-                               border.color: "blue";
+                                border.color: "blue";
                                 border.width: 5;
                                 z : 98;}
                     focus: true
@@ -481,7 +500,6 @@ App {
                         }
                     }
                 }
-
             }
 
             Rectangle{
@@ -495,7 +513,6 @@ App {
                border.color: infobutton.borderColor
                radius: 4
                clip: true
-
 
                Row{
                    id:inforow
@@ -515,7 +532,6 @@ App {
                        hoveredColor: infobutton.backgroundColor
                        anchors.verticalCenter: parent.verticalCenter
                        onClicked: {
-                           console.log("click")
                            infocontainer.visible = false
                            floorcontainer.visible = false
                            currentBuildingObjectID = ""
@@ -548,14 +564,14 @@ App {
                        hoveredColor: infobutton.backgroundColor
                        anchors.verticalCenter: parent.verticalCenter
                        onClicked: {
-                           console.log("click")
                            console.log(currentBuildingObjectID)
                            map.zoomTo(localBuildingsLayer.featureTable.feature(currentBuildingObjectID).geometry)
                        }
                    }
                }
             }
-
+            //the purpoe of this baselayer is to allow unlimited zoom levels
+            //it is "below" the tpk "basemap" layer
             FeatureLayer {
                 id: baseLayer
                 featureTable: localBuildingsTable
@@ -569,22 +585,23 @@ App {
                 enableLabels: true
             }
                 onMouseClicked:{
-                Helper.selectBuildingOnMap(mouse.x, mouse.y);
+                    Helper.selectBuildingOnMap(mouse.x, mouse.y);
                 }
+
             FeatureLayer {
                 id: localRoomsLayer
                 featureTable: localRoomsTable
-                definitionExpression: "OBJECTID < 0"
+                definitionExpression: "OBJECTID < 0" //hide features until floor selection is made
                 enableLabels: true
             }
+
             FeatureLayer {
                 id: localLinesLayer
                 featureTable: localLinesTable
-                definitionExpression: "OBJECTID < 0"
+                definitionExpression: "OBJECTID < 0" //hide features until floor selection is made
                 enableLabels: true
             }
         }
-
     }
 
 
@@ -600,9 +617,10 @@ App {
         anchors.left: app.left
         color:"lightgrey"
 
+        //MoueArea to prevent interaction with the map when it is "behind" the welcomemenu.
+        //There's probably a more elegant way to doing this.
         MouseArea{
             anchors.fill: parent
-            onClicked: console.log("clicked welcomeMenu mouse area")
         }
 
         Rectangle{
@@ -633,7 +651,7 @@ App {
                 fontSizeMode: Text.Fit
                 minimumPointSize: 4
                 font.pointSize: 10
-                text: "App Description Goes Here. App Description Goes Here. App Description Goes Here. App Description Goes Here."
+                text: "Sign in, download the basemap tile package, then download the secured floor plan feature layers and off you go. On the map you can view interior building layouts. Sync it now and again to get the latest updates downloaded onot your device."
             }
         }
         Rectangle{
@@ -740,15 +758,14 @@ App {
                     verticalAlignment: Text.AlignVCenter
                     color: "black"
                 }
-                onClicked: {console.log(userNameField.text);
-                            console.log(passwordField.text);
-                            myUsername = userNameField.text
+                onClicked: {myUsername = userNameField.text
                             myPassword = passwordField.text
                             userCredentials.userName = myUsername
                             userCredentials.password = myPassword
                             serviceInfoTask.fetchFeatureServiceInfo()
                             }
             }
+
             StyleButtonNoFader{
                 id: signedInButton
                 visible: false
@@ -804,7 +821,6 @@ App {
             anchors.right:parent.right
             anchors.left: parent.left
             anchors.top: signInDialogContainer.bottom
-            //anchors.top: gdbinfocontainer.bottom
             color:"white"
             anchors.margins: 6
             border.width: 1
@@ -867,12 +883,9 @@ App {
                     minimumPointSize: 4
                     font.pointSize: 16
                     verticalAlignment: Text.AlignVCenter
-                   //anchors.left:
                 }
 
                 onClicked:{
-                    console.log("CLICKED tpkDeleteButton")
-                    console.log("click middlebutton")
                     tpkFolder.removeFolder(tpkItemId, 1) //delete the tpk from local storage
                     tpkFolder.downloadThenAddLayer() //download and add the tpk layer
                 }
@@ -904,6 +917,7 @@ App {
                     anchors.margins: 2
                     opacity: if (tpkfile.exists == true){1} else {0.40}
                 }
+
                 Text{
                     id: tpkDeleteButtonText
                     text: "Remove copy from device"
@@ -920,11 +934,9 @@ App {
                     font.pointSize: 16
                     verticalAlignment: Text.AlignVCenter
                     color: if (tpkfile.exists == true){"black"} else {"lightgrey"}
-                   //anchors.left:
                 }
 
                 onClicked:{
-                    console.log("CLICKED tpkDeleteButton")
                     map.removeLayerByIndex(1)
                     tpkFolder.removeFolder(tpkFolder.path, true) //delete the tpk from local storage
                     Helper.doorkeeper()
@@ -958,7 +970,6 @@ App {
             anchors.right:parent.right
             anchors.left: parent.left
             anchors.top: tpkinfocontainer.bottom
-            //anchors.top: signInDialogContainer.bottom
             color:"white"
             anchors.margins: 6
             border.width: 1
@@ -1042,6 +1053,7 @@ App {
                     opacity: if(tpkfile.exists == false){0.5}else{0}
                 }
 
+                //blocking the clicking of button...
                 MouseArea{
                     id: mouseAreaBlockGDBDownloadUntilTPKisPresent
                     anchors.fill: parent
@@ -1106,9 +1118,9 @@ App {
                             gdbDeleteButtonText.text = "Undo"
                             gdbinfobuttontext.text = '<b><font color="red"> Device copy of operational layers set to be removed next time app is opened. </font><\b>'
                         }
-
                 }
             }
+
             Text{
                 id: gdbinfobuttontext
                 anchors.top:gdbinfoimagebutton.bottom
@@ -1138,7 +1150,6 @@ App {
             anchors.left: parent.left
             anchors.bottom: welcomemenucontainer.bottom
             anchors.top: gdbinfocontainer.bottom
-            //anchors.top:tpkinfocontainer.bottom
             color: if (!tpkFolder.exists || !gdbfile.exists){"red"} else{"green"}
             anchors.margins: 6
             border.color: "grey"
@@ -1146,7 +1157,6 @@ App {
             clip: true
 
             function proceedToMap(){
-                console.log("proceedToMap")
                 welcomemenucontainer.visible = false
                 Helper.getAllBldgs()//builds the list used for building search
             }
@@ -1258,12 +1268,12 @@ App {
                 MouseArea {
                     anchors.fill: parent
                     onClicked: {
-                        var foo = objectid //assign to js variable. Seems to only work that way.
-                        //this should be enhanced to auto-select the feature and zoom to envelope
+                        var foo = objectid //assign to js variable, .geometry seems to only work that way.
                         map.zoomTo(localBuildingsLayer.featureTable.feature(foo).geometry)
                         searchField.text = ""
                         searchmenucontainer.visible = false
                         Helper.updateBuildingDisplay(foo);
+                        //make mobile keybord dissapear
                         Qt.inputMethod.hide();
                         }
                 }
@@ -1280,16 +1290,13 @@ App {
     }
 //END SEARCHMENU
 //---------------------------------------------------------------------------------------------
-
     Component.onCompleted: {
         if (tpkFolder.exists){
             tpkFolder.addLayer()
         }
+
         if (nextTimeDeleteGDBfile.exists == true){
-            console.log(gdb.path)
-            console.log(gdbfile.filePath)
             Helper.deleteGDB()
-            console.log("Helper.deleteGDB()")
         }
         else{
             gdbfile.refresh()
@@ -1299,7 +1306,5 @@ App {
         }
         Helper.doorkeeper()
         buttonRotateCounterClockwise.fader.start()
-        console.log(map.layerCount)
     }
 }
-

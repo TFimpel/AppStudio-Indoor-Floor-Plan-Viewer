@@ -1,13 +1,12 @@
 //------------------------------------------------------------------------------
-//
+//used deleting the runtime geodatabase
 function deleteGDB(){
-    //geodatabaseSyncTask.unregisterGeodatabase(gdb)
-    console.log("Helper executed deleteGDB()")
     syncLogFolder.removeFolder(syncLogFolder.path, true);
 }
 
 //--------------------------------------------------------------------------
-//build a list of all buldings, stored as a global variable used for the search menu.
+//used for building a list of all buldings.
+//list is stored as a global variable queried via the search menu.
 function getAllBldgs(){
     localBuildingsTable.queryFeatures("OBJECTID > 0");
 }
@@ -20,6 +19,7 @@ function buildAllBlgdList(iterator){
          var bldgName = (feature.attributeValue(bldgLyr_nameField))
          allBlgdList.push([objectID, bldgName, bldgID]);
    }
+   //sort alphabetically by building name
    allBlgdList.sort(compareBySecondArrayElement)
 }
 
@@ -30,8 +30,7 @@ function reloadFullBldgListModel(){
     for( var i=0; i < allBlgdList.length ; ++i ) {
     bldglistmodel.append({"bldgname" : allBlgdList[i][1],
                           "objectid" : allBlgdList[i][0],
-                          "bldgid" : allBlgdList[i][2]
-                         })
+                          "bldgid" : allBlgdList[i][2]})
     }
 }
 
@@ -56,7 +55,7 @@ function hideAllFloors(){
 }
 
 //----------------------------------------------------------------------
-//populate the floor list slider
+//sorting used for floor list slider the buildings in the search menu
 function compareBySecondArrayElement(a, b) {
     if (a[1] === b[1]) {
         return 0;
@@ -65,7 +64,8 @@ function compareBySecondArrayElement(a, b) {
         return (a[1] < b[1]) ? -1 : 1;
     }
 }
-
+//-----------------------------------------------------------------------
+//used for populating the floor slider and displaying only one floor at a time
 function setFloorFilters(index){
     localLinesLayer.definitionExpression = lineLyr_floorIdField  + " = '"+(floorListModel.get(floorListView.currentIndex).Floor)+"'" + " AND " + lineLyr_bldgIdField + "= '" + currentBuildingID +"'"
     localRoomsLayer.definitionExpression = roomLyr_floorIdField  + " = '"+(floorListModel.get(floorListView.currentIndex).Floor)+"'" + " AND " + roomLyr_bldgIdField + "= '" + currentBuildingID +"'"
@@ -90,19 +90,18 @@ function populateFloorListView(iterator,bldg, sortField){
                 if (floorlist.length > 0){
                     floorcontainer.visible = true;
                 }
+                //if there are no floors for seleted building hide the slider
                 else{
                     floorcontainer.visible = false;
                 }
+                //initially display the "lowest" floor in a building
                 floorListView.currentIndex = 0
                 setFloorFilters(0);
     }
 
-
-
 //------------------------------------------------------------------------------
-//take actions based on whetehr user already has local copies of tpk and gdb
+//take actions based on whether user already has local copies of tpk and gdb on device
 function doorkeeper(){
-    console.log("DOORKEEPER")
     if (updatesCheckfile.exists) {updatesCheckfile.refresh()};
     if (gdbfile.exists){gdbfile.refresh()};
     if (tpkfile.exists){tpkfile.refresh()};
@@ -114,12 +113,12 @@ function doorkeeper(){
         gdbinfobuttontext.text = " Sync updates for floor plan operational layers. App is unable to determine when updates were last synced."
     }
 
-    //to the fact that nextTimeDeleteGDBfile.exists always evaluates to false for some reason.
+    //check gdbDeleteButtonText.text === "Undo" becasue nextTimeDeleteGDBfile.exists always evaluates to false for some reason(?)
     if (gdbDeleteButtonText.text === "Undo"){
         gdbinfobuttontext.text = '<b><font color="red"> Device copy of operational layers set to be removed next time app is opened. </font><\b>'
     }
 
-    //this text is better set like so instead of putting the property on watch because the tpk download also modifies it
+    //this text is better set with this js function instead of putting the property on watch because the tpk download also modifies it
     if (!tpkFolder.exists){
         tpkinfobuttontext.text = " Download the basemap tile package to be able to proceed. "
     }
@@ -128,13 +127,13 @@ function doorkeeper(){
 }
 
 //----------------------------------------------------------------------
-//take actions when app is not ready to download or sync .geodatabase
+//takes action when app is not ready to download or sync .geodatabase
 function preventGDBSync(){
     gdbinfobuttontext.text = "  Unable to download updates for floor plan operational layers. Make sure you have internet connectivity and are signed in. "
 }
 
 //----------------------------------------------------------------------
-//if bldg. is not currenty select update the infotext and trigger a querychange on the lines and rooms tables
+//if the building is not currenty selected then update the infotext and trigger a querychange on the lines and rooms tables
 function selectBuildingOnMap(x,y) {
     var featureIds = localBuildingsLayer.findFeatures(x, y, 1, 1);
     if (featureIds.length > 0) {
@@ -142,10 +141,7 @@ function selectBuildingOnMap(x,y) {
     }
 }
 
-//----------------------------------------------------------------------
-//
 function updateBuildingDisplay(selectedFeatureId){
-    console.log(selectedFeatureId)
     infocontainer.visible = true;
     if (currentBuildingObjectID != selectedFeatureId){
         localBuildingsLayer.clearSelection();
@@ -160,12 +156,10 @@ function updateBuildingDisplay(selectedFeatureId){
         currentBuildingID = bldgNumber
         localLinesTable.queryFeatures("OBJECTID > 0")//this will trigger the populate floor slider functionailty
         }
-
 }
-
 
 //----------------------------------------------------------------------
 //for keeping track when the offline geodatabase has been synced last
 function writeSyncLog(){
-    syncLogFolder.writeFile("syncLog.txt","Offline Geodatabase last synced with server when this file was last modified. Very basic, I now. But hey, no annoying file locking issues...it just works :)")
+    syncLogFolder.writeFile("syncLog.txt","Offline Geodatabase last synced with server when this file was last modified. Very basic but hey, no annoying file locking issues...it just works")
 }

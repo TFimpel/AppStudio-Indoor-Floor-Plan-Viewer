@@ -35,8 +35,8 @@
     "mainFile": "MyApp.qml",
     "projectFile": "MyApp.qmlproject",
     "properties": {
-        "App Description": "Test App Decription Test App Decription Test App Decription Test App Decription Test App Decription Test App Decription",
-        "App Title": "Test Title",
+        "App Description": "Sign in, download the basemap tile package, then download the secured floor plan feature layers and off you go. On the map you can view interior building layouts. Sync it now and again to get the latest updates downloaded to your device.",
+        "App Title": "Floor Plan Viewer Template",
         "Basemap Tile Package Item ID": "",
         "Building Polygons LayerID": "",
         "Buildings layer building ID field": "",

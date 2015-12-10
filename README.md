@@ -13,31 +13,31 @@ A configurable ArcGIS AppStudio App Template to be used for viewing interior bui
 + App Description 
   *(example: "Sign in, download the basemap tile package, then download the secured floor plan feature layers and off you go. On the map you can view interior building layouts. Sync it now and again to get the latest updates downloaded to your device."
 + App Title
-  *(example: "Floor Plan Viewer")
+  *(example: "Floor Plan Viewer")*
 + Basemap Tile Package Item ID
-  *(example: "504e5db503d7432b89042c196d8cbf57")
+  *(example: "504e5db503d7432b89042c196d8cbf57")*
 + Floor Plans and Buildings Feature Service URL
-  *(example:  "http://services.arcgis.com/[...]/FeatureServer",
+  *(example:  "http://services.arcgis.com/[...]/FeatureServer")*
 + Building Polygons LayerID
-  *(example: "2")
+  *(example: "2")*
 + Floorplan Lines LayerID
-  *(example: "0")
+  *(example: "0")*
 + Floorplan Polygons LayerID
-  *(example: "1")
+  *(example: "1")*
 + Buildings layer building name field
-  *(example: "BUILDING_NAME")
+  *(example: "BUILDING_NAME")*
 + Buildings layer building ID field
-  *(example: "BUILDING_NUMBER")
+  *(example: "BUILDING_NUMBER")*
 + Floor plan lines layer building ID field"
-  *(example: "BUILDING_NUMBER")
+  *(example: "BUILDING_NUMBER")*
 + Floor plan lines layer floor field
-  *(example: "FLOOR")
+  *(example: "FLOOR")*
 + Floor plan lines layer sort field
-  *(example: "ELEVATION")
+  *(example: "ELEVATION")*
 + Floor plan polygon layer building ID field
-  *(example: "BUILDING_NUMBER")
+  *(example: "BUILDING_NUMBER")*
 + Floor plan polygon layer floor field
-  *(example: "FLOOR")
+  *(example: "FLOOR")*
 
 
 

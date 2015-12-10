@@ -6,12 +6,16 @@ A configurable ArcGIS AppStudio App Template to be used for viewing interior bui
 
 
 ## What you need to use this
--ArcGIS Online Organizational or Developer account
--AppStudio for ArcGIS (desktop)
++ ArcGIS Online Organizational or Developer account
++ AppStudio for ArcGIS (desktop)
+
+## How to use this
++ install AppStudio for ArcGIS and sing in to your ArcGIS Online account
++ download the code in thi repo, put it 
 
 ## Configurable Properties
 + App Description 
-  *(example: "Sign in, download the basemap tile package, then download the secured floor plan feature layers and off you go. On the map you can view interior building layouts. Sync it now and again to get the latest updates downloaded to your device."
+  *(example: "Sign in, download the basemap tile package, then download the secured floor plan feature layers and off you go. On the map you can view interior building layouts. Sync it now and again to get the latest updates downloaded to your device.")*
 + App Title
   *(example: "Floor Plan Viewer")*
 + Basemap Tile Package Item ID

@@ -1303,6 +1303,7 @@ App {
 //END SEARCHMENU
 //---------------------------------------------------------------------------------------------
     Component.onCompleted: {
+
         if (tpkFolder.exists){
             tpkFolder.addLayer()
         }

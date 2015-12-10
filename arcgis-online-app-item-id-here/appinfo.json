@@ -35,20 +35,20 @@
     "mainFile": "MyApp.qml",
     "projectFile": "MyApp.qmlproject",
     "properties": {
-        "App Description": "Sign in, download the basemap tile package, then download the secured floor plan feature layers and off you go. On the map you can view interior building layouts. Sync it now and again to get the latest updates downloaded to your device.",
-        "App Title": "Floor Plan Viewer",
-        "Basemap Tile Package Item ID": "504e5db503d7432b89042c196d8cbf57",
-        "Floor Plans and Buildings Feature Service URL": "http://services.arcgis.com/8df8p0NlLFEShl0r/arcgis/rest/services/WestBank_Floors/FeatureServer",
-        "Building Polygons LayerID": "2",
-        "Floorplan Lines LayerID": "0",
-        "Floorplan Polygons LayerID": "1",
-        "Buildings layer building name field": "NAME",
-        "Buildings layer building ID field": "BUILDING_NUMBER",
-        "Floor plan lines layer building ID field": "BUILDING",
-        "Floor plan lines layer floor field": "FLOOR",
-        "Floor plan lines layer sort field": "FLOOR",
-        "Floor plan polygon layer building ID field": "BUILDING",
-        "Floor plan polygon layer floor field": "FLOOR"
+        "App Description": "Test App Decription Test App Decription Test App Decription Test App Decription Test App Decription Test App Decription",
+        "App Title": "Test Title",
+        "Basemap Tile Package Item ID": "",
+        "Building Polygons LayerID": "",
+        "Buildings layer building ID field": "",
+        "Buildings layer building name field": "",
+        "Floor Plans and Buildings Feature Service URL": "",
+        "Floor plan lines layer building ID field": "",
+        "Floor plan lines layer floor field": "",
+        "Floor plan lines layer sort field": "",
+        "Floor plan polygon layer building ID field": "",
+        "Floor plan polygon layer floor field": "",
+        "Floorplan Lines LayerID": "",
+        "Floorplan Polygons LayerID": ""
     },
     "resources": {
         "appIcon": "thumbnail.png",
@@ -59,6 +59,6 @@
     "type": "app",
     "urlScheme": "",
     "version": {
-        "micro": 4
+        "micro": 6
     }
 }

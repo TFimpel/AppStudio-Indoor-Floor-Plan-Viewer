@@ -2,6 +2,8 @@
 ArcGIS AppStudio app for working with indoor GIS data offline.
 ## Synopsis
 
+A configurable ArcGIS AppStudio App Template to be used for viewing interior building floor plans.  
+
 At the top of the file there should be a short introduction and/ or overview that explains **what** the project is. This description should match descriptions added for package managers (Gemspec, package.json, etc.)
 
 ![alt text](https://cloud.githubusercontent.com/assets/7443922/11705829/d3bf5326-9eb8-11e5-9e6b-b3acbf5e0933.PNG "Screen shots of Flor Plan Viewer App on Google Nexus5")
@@ -31,6 +33,3 @@ Describe and show how to run the tests with code examples.
 
 Let people know how they can dive into the project, include important links to things like issue trackers, irc, twitter accounts if applicable.
 
-## License
-
-A short snippet describing the license (MIT, Apache, etc.)

@@ -43,16 +43,26 @@ App {
     property var allBlgdList: []
 
     //define relevant field names. Ultimately these should all be configurable app parameters
-    property string bldgLyr_nameField: "NAME"
-    property string bldgLyr_bldgIdField: "BUILDING_NUMBER"
+    //property string bldgLyr_nameField: "NAME"
+    property string bldgLyr_nameField: app.info.propertyValue("Buildings layer building name field","NAME")
+    //property string bldgLyr_bldgIdField: "BUILDING_NUMBER"
+    property string bldgLyr_bldgIdField: app.info.propertyValue("Buildings layer building ID field","BUILDING_NUMBER")
 
-    property string lineLyr_bldgIdField: "BUILDING"
-    property string lineLyr_floorIdField: "FLOOR"
-    property string lineLyr_sortField: "FLOOR"
+    //property string lineLyr_bldgIdField: "BUILDING"
+    property string lineLyr_bldgIdField: app.info.propertyValue("Floor plan lines layer building ID field","BUILDING")
+    //property string lineLyr_floorIdField: "FLOOR"
+    property string lineLyr_floorIdField: app.info.propertyValue("Floor plan lines layer floor field","FLOOR")
+    //property string lineLyr_sortField: "FLOOR"
+    property string lineLyr_sortField: app.info.propertyValue("Floor plan lines layer sort field","FLOOR")
 
-    property string roomLyr_bldgIdField: "BUILDING"
-    property string roomLyr_floorIdField: "FLOOR"
-    property string roomLyr_roomIdField: "ROOM"
+    //property string roomLyr_bldgIdField: "BUILDING"
+    property string roomLyr_bldgIdField: app.info.propertyValue("Floor plan polygon layer building ID field","BUILDING")
+    //property string roomLyr_floorIdField: "FLOOR"
+    property string roomLyr_floorIdField: app.info.propertyValue("Floor plan polygon layer floor field","FLOOR")
+
+    //to be used for room specific info in future
+    //property string roomLyr_roomIdField: "ROOM"
+    //property string roomLyr_roomIdField: app.info.propertyValue("Floor plan polygon layer room ID field","ROOM")
 
 //END INITIALIZING SOME GLOBAL VARIABLES
 //--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -74,8 +84,8 @@ App {
     property string nextTimeDeleteGDBfilePath: "~/ArcGIS/AppStudio/Apps/" + appItemId + "/Data/nextTimeDeleteGDB.txt"
 
     //the secured feature service from which the .geodatabase will replicated. make configurable app parameter
-    property string featuresUrl: "http://services.arcgis.com/8df8p0NlLFEShl0r/arcgis/rest/services/WestBank_Floors/FeatureServer"
-
+    //property string featuresUrl: "http://services.arcgis.com/8df8p0NlLFEShl0r/arcgis/rest/services/WestBank_Floors/FeatureServer"
+    property string featuresUrl: app.info.propertyValue("Floor Plans and Buildings Feature Service URL","http://services.arcgis.com/8df8p0NlLFEShl0r/arcgis/rest/services/WestBank_Floors/FeatureServer")
 
     //use this file to keep track of whether the .geodatabase shuld be deleted next time app is opened
     FileInfo {
@@ -87,7 +97,6 @@ App {
         id: gdbfile
         //if to be deleted from device then set path to "null" to avoid file locking
         filePath: if (nextTimeDeleteGDBfile.exists == true){"null"} else {gdbPath}
-
 
         function generategdb(){
             generateGeodatabaseParameters.initialize(serviceInfoTask.featureServiceInfo);
@@ -196,7 +205,7 @@ App {
     Geodatabase{
         id: gdb
         //set path to "null" initially. once app is loaded we set this path properly.
-        //done to avoid file locking. applying if/else dependi g on whetehr
+        //this is done to avoid file locking. applying if/else depending on whether the
         //gdbdeletefile exists doesn't work here for some reason.
         path: "null"
     }
@@ -204,10 +213,11 @@ App {
     GeodatabaseFeatureTable {
         id: localLinesTable
         geodatabase: gdb.valid ? gdb : null
-        featureServiceLayerId: 0
+        //featureServiceLayerId: 0
+        featureServiceLayerId: app.info.propertyValue("Floorplan Lines LayerID","")
         onQueryFeaturesStatusChanged: {
             //this is used to build the floor list.
-            //assumption is that there is one row per building-floor
+            //assumption is that there is one row per building-floor in this layer
             if (queryFeaturesStatus === Enums.QueryFeaturesStatusCompleted) {
                 Helper.populateFloorListView(queryFeaturesResult.iterator, currentBuildingID , lineLyr_sortField)
             }
@@ -217,16 +227,18 @@ App {
     GeodatabaseFeatureTable {
         id: localRoomsTable
         geodatabase: gdb.valid ? gdb : null
-        featureServiceLayerId: 1
+        //featureServiceLayerId: 1
+        featureServiceLayerId: app.info.propertyValue("Floorplan Polygons LayerID","")
     }
 
     GeodatabaseFeatureTable {
         id: localBuildingsTable
         geodatabase: gdb.valid ? gdb : null
-        featureServiceLayerId: 2
+        //featureServiceLayerId: 2
+        featureServiceLayerId: app.info.propertyValue("Building Polygons LayerID","")
         onQueryFeaturesStatusChanged: {
             //this is used to build the building search list
-            //assumption is that there is one row per building
+            //assumption is that there is one row per building in this layer
             if (queryFeaturesStatus === Enums.QueryFeaturesStatusCompleted) {
                 Helper.buildAllBlgdList(queryFeaturesResult.iterator)
                 }
@@ -234,8 +246,8 @@ App {
     }
 
     //define place to store local tile package and define FileFolder object
-    //make app parameter
-    property string tpkItemId : "504e5db503d7432b89042c196d8cbf57"
+    //property string tpkItemId : "504e5db503d7432b89042c196d8cbf57"
+    property string tpkItemId : app.info.propertyValue("Basemap Tile Package Item ID","504e5db503d7432b89042c196d8cbf57");
     FileFolder {
         id: tpkFolder
         //currently not possible to save in .../Apps/appItemId/... folderName
@@ -326,7 +338,8 @@ App {
         }
         Text{
             id:titletext
-            text:"Floor Plan Viewer" //make configurable app paramter
+            //text:"Floor Plan Viewer"
+            text: app.info.propertyValue("App Title","Floor Plan Viewer");
             anchors.horizontalCenter: parent.horizontalCenter
             anchors.verticalCenter: parent.verticalCenter
             height:parent.height
@@ -337,7 +350,7 @@ App {
             clip:true
             verticalAlignment: Text.AlignVCenter
             horizontalAlignment:  Text.AlignHCenter
-            color:"white" //make configurable app paramter
+            color:"white"
             font.weight: Font.DemiBold
         }
 
@@ -350,7 +363,6 @@ App {
             iconSource: if (searchmenucontainer.visible === true){"images/close.png"} else{"images/search.png"}
             backgroundColor: "transparent"
             onClicked: {
-                console.log("click searchmenu")
                 if (welcomemenucontainer.visible != true){
                     if (searchmenucontainer.visible === true){
                         searchmenucontainer.visible = false
@@ -489,7 +501,6 @@ App {
                         Column {
                             Text { text: Floor}
                             anchors.centerIn:parent
-
                         }
                         MouseArea {
                             anchors.fill: parent
@@ -651,7 +662,8 @@ App {
                 fontSizeMode: Text.Fit
                 minimumPointSize: 4
                 font.pointSize: 10
-                text: "Sign in, download the basemap tile package, then download the secured floor plan feature layers and off you go. On the map you can view interior building layouts. Sync it now and again to get the latest updates downloaded onot your device."
+                text: app.info.propertyValue("App Description","Sign in, download the basemap tile package, then download the secured floor plan feature layers and off you go. On the map you can view interior building layouts. Sync it now and again to get the latest updates downloaded to your device.");
+                //text: "Sign in, download the basemap tile package, then download the secured floor plan feature layers and off you go. On the map you can view interior building layouts. Sync it now and again to get the latest updates downloaded onot your device."
             }
         }
         Rectangle{
@@ -796,7 +808,7 @@ App {
                 }
                 Text{
                     id: singedInButtonText
-                    text: "Signed in as " + myUsername
+                    text: if (myUsername != ""){"Signed in as " + myUsername} else{"No sign in required."}
                     anchors.left: parent.left
                     anchors.right: parent.right
                     anchors.top: parent.verticalCenter
@@ -1291,6 +1303,7 @@ App {
 //END SEARCHMENU
 //---------------------------------------------------------------------------------------------
     Component.onCompleted: {
+
         if (tpkFolder.exists){
             tpkFolder.addLayer()
         }

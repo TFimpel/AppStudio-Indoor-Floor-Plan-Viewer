@@ -35,6 +35,20 @@
     "mainFile": "MyApp.qml",
     "projectFile": "MyApp.qmlproject",
     "properties": {
+        "App Description": "Test App Decription Test App Decription Test App Decription Test App Decription Test App Decription Test App Decription",
+        "App Title": "Test Title",
+        "Basemap Tile Package Item ID": "",
+        "Building Polygons LayerID": "",
+        "Buildings layer building ID field": "",
+        "Buildings layer building name field": "",
+        "Floor Plans and Buildings Feature Service URL": "",
+        "Floor plan lines layer building ID field": "",
+        "Floor plan lines layer floor field": "",
+        "Floor plan lines layer sort field": "",
+        "Floor plan polygon layer building ID field": "",
+        "Floor plan polygon layer floor field": "",
+        "Floorplan Lines LayerID": "",
+        "Floorplan Polygons LayerID": ""
     },
     "resources": {
         "appIcon": "thumbnail.png",
@@ -45,6 +59,6 @@
     "type": "app",
     "urlScheme": "",
     "version": {
-        "micro": 4
+        "micro": 6
     }
 }

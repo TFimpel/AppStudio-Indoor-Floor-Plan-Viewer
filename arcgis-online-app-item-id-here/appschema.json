@@ -1,0 +1,96 @@
+{
+    "propertiesInfo": {
+        "title": "Configurable Properties",
+        "categoryInfos": [
+            {
+                "title": "Configurable Properties",
+                "propertyInfos": [
+                    {
+                        "type": "string",
+                        "label": "App Title",
+                        "hint": "The app title is displayed in th title bar.",
+                        "name" : "App Title"
+                    },
+                    {
+                        "type": "string",
+                        "label": "App Description",
+                        "hint": "The app description is your chance to help your users figure out what this app is about and how to use it.",
+                        "name" : "App Description"
+                    },
+                    {
+                        "type": "string",
+                        "label": "Basemap Tile Package Item ID",
+                        "hint": "The map uses a tile package as a basemap. The tile package is also used to determine which features from the feature service (see next parameter) are downloaded to the device: only features that intersect the extent of the tile package will be downloaded. The tile package needs to be uploaded to ArcGIS Online and be accessible without authentication (i.e. shared with everyone, not just an ArcGIS Online Group.) Enter the Tile Package's Item ID.",
+                        "name" : "Basemap Tile Package Item ID"
+                    },
+                    {
+                        "type": "string",
+                        "label": "Floor Plans and Buildings Feature Service URL",
+                        "hint": "This feature service needs to contain one polygon layer with building footprints and two layers (lines and polygons) with interior building floor plans. Access to it can be public or be restricted via ArcGIS Online item sharing properties.",
+                        "name" : "Floor Plans and Buildings Feature Service URL"
+                    },
+                    {
+                        "type": "number",
+                        "label": "Building Polygons LayerID",
+                        "hint": "The Feature Service layer ID of the building polygons layer. For example, if the buildings layer is 'on top of' all other layers this parameter should be 0 .",
+                        "name" : "Building Polygons LayerID"
+                    },
+                    {
+                        "type": "number",
+                        "label": "Floorplan Lines LayerID",
+                        "hint": "The Feature Service layer ID of the floor plan lines layer.",
+                        "name" : "Floorplan Lines LayerID"
+                    },
+                    {
+                        "type": "number",
+                        "label": "Floorplan Polygons LayerID",
+                        "hint": "The Feature Service layer ID of the floor plan polygons layer.",
+                        "name" : "Floorplan Polygons LayerID"
+                    },
+                    {
+                        "type": "string",
+                        "label": "Buildings layer building name field",
+                        "hint": "Buildings layer building name field (unique values).",
+                        "name" : "Buildings layer building name field"
+                    },
+                    {
+                        "type": "string",
+                        "label": "Buildings layer building ID field",
+                        "hint": "Buildings layer building ID field (unique values).",
+                        "name" : "Buildings layer building ID field"
+                    },
+                    {
+                        "type": "string",
+                        "label": "Floor plan lines layer building ID field",
+                        "hint": "Floor plan lines layer building ID field (unique values).",
+                        "name" : "Floor plan lines layer building ID field"
+                    },
+                    {
+                        "type": "string",
+                        "label": "Floor plan lines layer floor field",
+                        "hint": "Floor plan lines layer floor field.",
+                        "name" : "Floor plan lines layer floor field"
+                    },
+                    {
+                        "type": "string",
+                        "label": "Floor plan lines layer sort field",
+                        "hint": "Floor plan lines layer sort field. If sort orer should be alphabetical choose same as floor field ",
+                        "name" : "Floor plan lines layer sort field"
+                    },
+                    {
+                        "type": "string",
+                        "label": "Floor plan polygon layer building ID field",
+                        "hint": "Floor plan polygon layer building ID field",
+                        "name" : "Floor plan polygon layer building ID field"
+                    },
+                    {
+                        "type": "string",
+                        "label": "Floor plan polygon layer floor field",
+                        "hint": "Floor plan polygon layer floor field",
+                        "name" : "Floor plan polygon layer floor field"
+                    }
+                ]
+            }
+        ]
+    }
+}

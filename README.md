@@ -59,4 +59,4 @@ A configurable ArcGIS AppStudio App Template to be used for viewing interior bui
 
 Note that the Basemap Tile Package Item needs to be publicly accessible. The Floor Plans and Buildings Feature Service can be secured via ArcGIS Online Groups or publicly accessible. It needs to be sync enabled, and the app will download a copy of all features that intersect the tile package's extent (test with small data first).
 
-The configurable fields are used to determine which floors are display-able for each building. The requirements for these fields are intentionally kept at a minimum, but it is critical to have these attribute data clean and thus relat-able.
+The configurable fields are used to determine which floors are display-able for each building. The requirements for these fields are intentionally kept at a minimum, but it is critical to have these attribute data clean and thus relate-able.

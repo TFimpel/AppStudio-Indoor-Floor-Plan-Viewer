@@ -1,6 +1,13 @@
 # appstudio_floorplan_app
 ## Synopsis
-A configurable ArcGIS AppStudio App Template to be used for viewing interior building floor plans. 
+A configurable ArcGIS AppStudio App Template to be used for viewing interior building floor plans.
++ useable offline
++ building search
++ can leverage ArcGIS Online authentication
++ zoom-in not limited to basemap scale levels
++ minimal requirements for data in terms of required fields etc.
++ intuitive user interface
++ (note: no feature pop-up's available at this point)
 
 ![alt text](https://cloud.githubusercontent.com/assets/7443922/11705829/d3bf5326-9eb8-11e5-9e6b-b3acbf5e0933.PNG "Screen shots of Flor Plan Viewer App on Google Nexus5")
 
@@ -9,6 +16,7 @@ A configurable ArcGIS AppStudio App Template to be used for viewing interior bui
 + ArcGIS Online Organizational or Developer account
 + AppStudio for ArcGIS (Desktop)
 + AppStudio Player app
++ GIS data (Feature Service & Tile Package)
 
 ## How to use this
 1. Install AppStudio for ArcGIS and sing in to your ArcGIS Online account

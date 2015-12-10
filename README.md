@@ -1,25 +1,47 @@
 # appstudio_floorplan_app
-ArcGIS AppStudio app for working with indoor GIS data offline.
 ## Synopsis
-
-A configurable ArcGIS AppStudio App Template to be used for viewing interior building floor plans.  
-
-At the top of the file there should be a short introduction and/ or overview that explains **what** the project is. This description should match descriptions added for package managers (Gemspec, package.json, etc.)
+A configurable ArcGIS AppStudio App Template to be used for viewing interior building floor plans. 
 
 ![alt text](https://cloud.githubusercontent.com/assets/7443922/11705829/d3bf5326-9eb8-11e5-9e6b-b3acbf5e0933.PNG "Screen shots of Flor Plan Viewer App on Google Nexus5")
 
 
-## Code Example
+## What you need to use this
+-ArcGIS Online Organizational or Developer account
+-AppStudio for ArcGIS (desktop)
 
-Show what the library does as concisely as possible, developers should be able to figure out **how** your project solves their problem by looking at the code example. Make sure the API you are showing off is obvious, and that your code is short and concise.
+## Configurable Properties
+        *App Description 
+        ⋅⋅*(example: "Sign in, download the basemap tile package, then download the secured floor plan feature layers and off you go. On the map you can view interior building layouts. Sync it now and again to get the latest updates downloaded to your device."
+        *App Title
+        ⋅⋅*(example: "Floor Plan Viewer")
+        *Basemap Tile Package Item ID
+        ⋅⋅*(example: "504e5db503d7432b89042c196d8cbf57")
+        *Floor Plans and Buildings Feature Service URL
+        ⋅⋅*(example:  "http://services.arcgis.com/[...]/FeatureServer",
+        *Building Polygons LayerID
+        ⋅⋅*(example: "2")
+        *Floorplan Lines LayerID
+        ⋅⋅*(example: "0")
+        *Floorplan Polygons LayerID
+        ⋅⋅*(example: "1")
+        *Buildings layer building name field
+        ⋅⋅*(example: "BUILDING_NAME")
+        *Buildings layer building ID field
+        ⋅⋅*(example: "BUILDING_NUMBER")
+        *Floor plan lines layer building ID field"
+        ⋅⋅*(example: "BUILDING_NUMBER")
+        *Floor plan lines layer floor field
+        ⋅⋅*(example: "FLOOR")
+        *Floor plan lines layer sort field
+        ⋅⋅*(example: "ELEVATION")
+        *Floor plan polygon layer building ID field
+        ⋅⋅*(example: "BUILDING_NUMBER")
+        *Floor plan polygon layer floor field
+        ⋅⋅*(example: "FLOOR")
 
-## Motivation
 
-A short description of the motivation behind the creation and maintenance of the project. This should explain **why** the project exists.
 
-## Installation
 
-Provide code examples and explanations of how to get the project.
 
 ## API Reference
 

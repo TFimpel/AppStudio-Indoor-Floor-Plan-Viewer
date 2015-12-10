@@ -7,11 +7,17 @@ A configurable ArcGIS AppStudio App Template to be used for viewing interior bui
 
 ## What you need to use this
 + ArcGIS Online Organizational or Developer account
-+ AppStudio for ArcGIS (desktop)
++ AppStudio for ArcGIS (Desktop)
++ AppStudio Player app
 
 ## How to use this
-+ install AppStudio for ArcGIS and sing in to your ArcGIS Online account
-+ download the code in thi repo, put it 
+1. Install AppStudio for ArcGIS and sing in to your ArcGIS Online account
+2. Download the code in this repo, put the folder "arcgis-online-app-item-id-here" (incl. all its contents) into the appropriate directory on your computer. The directory path probably depends on your installation. On Windows by default it is C:\Users\<username>\ArcGIS\AppStudio\Apps\
+3. Open AppStudio for Desktop. The new app item will appear now and you can configure the properties (see below) and then upload the ap item to your ArcGIS Online account. 
+4. Following that initial upload the id value in your local copy of file itminfo.json will not be null anymore. Instead it will be a long string of characters, something like "1234567890ABC123XYZ".
+5. Rename the app's folder name in the ...\ArcGIS\AppStudio\Apps\... directory from "arcgis-online-app-item-id-here" to this id value that your upload generated.
+6. Now "Update" the app item via the AppStudio Upload process. (The reason for doing this is so that the app stores the local .geodatabase file in the correct place upon download to device)
+7. Use the app on most any device/OS with the AppStudio Player app available in iOS/Android/Windows stores.
 
 ## Configurable Properties
 + App Description 
@@ -43,19 +49,6 @@ A configurable ArcGIS AppStudio App Template to be used for viewing interior bui
 + Floor plan polygon layer floor field
   *(example: "FLOOR")*
 
+Note that the Basemap Tile Package Item needs to be publicly accessible. The Floor Plans and Buildings Feature Service can be secured via ArcGIS Online Groups or publicly accessible. It needs to be sync enabled, and the app will download a copy of all features that intersect the tile package's extent (test with small data first).
 
-
-
-
-## API Reference
-
-Depending on the size of the project, if it is small and simple enough the reference docs can be added to the README. For medium size to larger projects it is important to at least provide a link to where the API reference docs live.
-
-## Tests
-
-Describe and show how to run the tests with code examples.
-
-## Contributors
-
-Let people know how they can dive into the project, include important links to things like issue trackers, irc, twitter accounts if applicable.
-
+The configurable fields are used to determine which floors are display-able for each building. The requirements for these fields are intentionally kept at a minimum, but it is critical to have these attribute data clean and thus relat-able.

@@ -1,5 +1,5 @@
 # appstudio_floorplan_app
-## Synopsis
+## Summary
 A configurable [ArcGIS AppStudio](https://appstudio.arcgis.com/) App Template to be used for viewing interior building floor plans.
 + useable offline
 + building search

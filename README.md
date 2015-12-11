@@ -14,7 +14,7 @@ A configurable [ArcGIS AppStudio](https://appstudio.arcgis.com/) App Template to
 
 ## What you need to use this
 + ArcGIS Online Organizational or Developer account
-+ AppStudio for ArcGIS (Desktop)
++ AppStudio for ArcGIS Desktop ("Standard" license, "Basic" is not sufficient) 
 + AppStudio Player app
 + GIS data (Feature Service & Tile Package)
 

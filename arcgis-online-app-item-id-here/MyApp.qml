@@ -10,7 +10,6 @@ import ArcGIS.AppFramework 1.0
 import ArcGIS.AppFramework.Controls 1.0
 import ArcGIS.AppFramework.Runtime 1.0
 import ArcGIS.AppFramework.Runtime.Controls 1.0
-import ArcGIS.AppFramework.Runtime.Dialogs 1.0
 
 import "Helper.js" as Helper
 

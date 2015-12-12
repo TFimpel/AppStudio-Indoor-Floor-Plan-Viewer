@@ -33,9 +33,9 @@ A configurable [ArcGIS AppStudio](https://appstudio.arcgis.com/) App Template to
 + App Title
   *(example: "Floor Plan Viewer")*
 + Basemap Tile Package Item ID
-  *(example: "504e5db503d7432b89042c196d8cbf57")*
+  *(example: "ca4e891f86884fe5ab14d718c3d1a01f")*
 + Floor Plans and Buildings Feature Service URL
-  *(example:  "http://services.arcgis.com/[...]/FeatureServer")*
+  *(example:  "http://services.arcgis.com/8df8p0NlLFEShl0r/arcgis/rest/services/BlegenSocSciFloors/FeatureServer")*
 + Building Polygons LayerID
   *(example: "2")*
 + Floorplan Lines LayerID
@@ -43,17 +43,17 @@ A configurable [ArcGIS AppStudio](https://appstudio.arcgis.com/) App Template to
 + Floorplan Polygons LayerID
   *(example: "1")*
 + Buildings layer building name field
-  *(example: "BUILDING_NAME")*
+  *(example: "NAME")*
 + Buildings layer building ID field
   *(example: "BUILDING_NUMBER")*
 + Floor plan lines layer building ID field"
-  *(example: "BUILDING_NUMBER")*
+  *(example: "BUILDING")*
 + Floor plan lines layer floor field
   *(example: "FLOOR")*
 + Floor plan lines layer sort field
   *(example: "ELEVATION")*
 + Floor plan polygon layer building ID field
-  *(example: "BUILDING_NUMBER")*
+  *(example: "BUILDING")*
 + Floor plan polygon layer floor field
   *(example: "FLOOR")*
 

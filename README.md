@@ -22,7 +22,7 @@ A configurable [ArcGIS AppStudio](https://appstudio.arcgis.com/) App Template to
 1. Install AppStudio for ArcGIS and sing in to your ArcGIS Online account (you need a "Standard" license allocated to your account to sign in)
 2. Download the code in this repo, put the folder "arcgis-online-app-item-id-here" (incl. all its contents) into the appropriate directory on your computer. The directory path probably depends on your installation. On Windows by default it is C:\Users\<username>\ArcGIS\AppStudio\Apps\
 3. Open AppStudio for Desktop. The new app item will appear now and you can configure the properties (see below) and then upload the app item to your ArcGIS Online account. 
-4. Following that initial upload the id value in your local copy of file itminfo.json will not be null anymore. Instead it will be a long string of characters, something like "1234567890ABC123XYZ".
+4. Following that initial upload the id value in your local copy of file itminfo.json (line 16) will not be null anymore. Instead it will be a long string of characters, something like "1234567890ABC123XYZ".
 5. Rename the app's folder name in the ...\ArcGIS\AppStudio\Apps\... directory from "arcgis-online-app-item-id-here" to this id value that your upload generated.
 6. Now "Update" the app item via the AppStudio Upload process. (The reason for doing this is so that the app stores the local .geodatabase file in the correct place upon download to device)
 7. Use the app on most any device/OS with the AppStudio Player app available in iOS/Android/Windows stores.
